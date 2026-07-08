@@ -1,5 +1,5 @@
 const NORMAL_K = 32;
-const TIEBREAK_K = 20;
+const TIEBREAK_K = 24;
 export const STARTING_RATING = 1500;
 
 type EloPlayerState = {
@@ -46,4 +46,3 @@ function averageRating(players: EloPlayerState[]) {
 function expectedScore(teamRating: number, opponentRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - teamRating) / 400));
 }
-
