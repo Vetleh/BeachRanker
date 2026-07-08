@@ -1,5 +1,5 @@
 import { createId, nowIso } from "./crypto";
-import type { D1Database } from "./env";
+import type { D1Database, D1PreparedStatement } from "./env";
 import type { MatchInput, MatchRow, MatchSet, Player, RatingSnapshot, User } from "./types";
 
 export async function findUserByEmail(db: D1Database, email: string) {
@@ -118,54 +118,51 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
   const isTiebreak = input.isTiebreak ?? input.sets.length >= 3;
   const timestamp = nowIso();
 
-  await db
-    .prepare(
-      "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(
-      matchId,
-      input.playedAt,
-      winningTeam,
-      isTiebreak ? 1 : 0,
-      enteredByUserId,
-      input.teamAPlayerIds[0],
-      input.teamAPlayerIds[1],
-      input.teamBPlayerIds[0],
-      input.teamBPlayerIds[1],
-      timestamp,
-      timestamp
-    )
-    .run();
-
-  for (const [index, set] of input.sets.entries()) {
-    await insertSet(db, matchId, index + 1, set);
-  }
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(
+        matchId,
+        input.playedAt,
+        winningTeam,
+        isTiebreak ? 1 : 0,
+        enteredByUserId,
+        input.teamAPlayerIds[0],
+        input.teamAPlayerIds[1],
+        input.teamBPlayerIds[0],
+        input.teamBPlayerIds[1],
+        timestamp,
+        timestamp
+      ),
+    ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set))
+  ]);
 
   return matchId;
 }
 
 export async function updateMatch(db: D1Database, matchId: string, input: MatchInput, winningTeam: "A" | "B") {
   const isTiebreak = input.isTiebreak ?? input.sets.length >= 3;
-  await db
-    .prepare(
-      "UPDATE matches SET playedAt = ?, winningTeam = ?, isTiebreak = ?, teamAPlayer1Id = ?, teamAPlayer2Id = ?, teamBPlayer1Id = ?, teamBPlayer2Id = ?, updatedAt = ? WHERE id = ?"
-    )
-    .bind(
-      input.playedAt,
-      winningTeam,
-      isTiebreak ? 1 : 0,
-      input.teamAPlayerIds[0],
-      input.teamAPlayerIds[1],
-      input.teamBPlayerIds[0],
-      input.teamBPlayerIds[1],
-      nowIso(),
-      matchId
-    )
-    .run();
-  await db.prepare("DELETE FROM match_sets WHERE matchId = ?").bind(matchId).run();
-  for (const [index, set] of input.sets.entries()) {
-    await insertSet(db, matchId, index + 1, set);
-  }
+  await db.batch([
+    db
+      .prepare(
+        "UPDATE matches SET playedAt = ?, winningTeam = ?, isTiebreak = ?, teamAPlayer1Id = ?, teamAPlayer2Id = ?, teamBPlayer1Id = ?, teamBPlayer2Id = ?, updatedAt = ? WHERE id = ?"
+      )
+      .bind(
+        input.playedAt,
+        winningTeam,
+        isTiebreak ? 1 : 0,
+        input.teamAPlayerIds[0],
+        input.teamAPlayerIds[1],
+        input.teamBPlayerIds[0],
+        input.teamBPlayerIds[1],
+        nowIso(),
+        matchId
+      ),
+    db.prepare("DELETE FROM match_sets WHERE matchId = ?").bind(matchId),
+    ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set))
+  ]);
 }
 
 export async function deleteMatch(db: D1Database, matchId: string) {
@@ -258,11 +255,15 @@ export async function clearAllSnapshots(db: D1Database) {
   await db.prepare("DELETE FROM rating_snapshots").run();
 }
 
-function insertSet(db: D1Database, matchId: string, setNumber: number, set: MatchSet) {
+function insertSetStatement(
+  db: D1Database,
+  matchId: string,
+  setNumber: number,
+  set: MatchSet
+): D1PreparedStatement {
   return db
     .prepare("INSERT INTO match_sets (id, matchId, setNumber, teamAPoints, teamBPoints) VALUES (?, ?, ?, ?, ?)")
-    .bind(createId(), matchId, setNumber, set.teamAPoints, set.teamBPoints)
-    .run();
+    .bind(createId(), matchId, setNumber, set.teamAPoints, set.teamBPoints);
 }
 
 function formatPlayer(player: Player | { id: string; name: string; active: number }) {
