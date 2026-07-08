@@ -18,13 +18,18 @@ type MatchWithSets = Match & {
 export async function recalculateRatings() {
   const players = await prisma.player.findMany();
   const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
+  const snapshots: Array<{
+    matchId: string;
+    playerId: string;
+    preRating: number;
+    postRating: number;
+    delta: number;
+  }> = [];
 
   const matches = await prisma.match.findMany({
     orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
     include: { sets: true }
   });
-
-  await prisma.ratingSnapshot.deleteMany();
 
   for (const match of matches) {
     const teamA = [match.teamAPlayer1Id, match.teamAPlayer2Id].map((id) => ({
@@ -43,20 +48,25 @@ export async function recalculateRatings() {
       isTiebreak: match.isTiebreak
     });
 
-    await prisma.ratingSnapshot.createMany({
-      data: results.map((result) => ({
+    snapshots.push(
+      ...results.map((result) => ({
         matchId: match.id,
         playerId: result.playerId,
         preRating: result.preRating,
         postRating: result.postRating,
         delta: result.delta
       }))
-    });
+    );
 
     results.forEach((result) => {
       ratings.set(result.playerId, result.postRating);
     });
   }
+
+  await prisma.$transaction([
+    prisma.ratingSnapshot.deleteMany(),
+    ...(snapshots.length > 0 ? [prisma.ratingSnapshot.createMany({ data: snapshots })] : [])
+  ]);
 
   return ratings;
 }

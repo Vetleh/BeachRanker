@@ -1,12 +1,4 @@
-import {
-  clearAllSnapshots,
-  listMatches,
-  listPlayers,
-  listSets,
-  listSnapshots,
-  replaceSnapshots,
-  snapshotsForMatch
-} from "./db";
+import { listMatches, listPlayers, listSets, listSnapshots, replaceAllSnapshots, snapshotsForMatch } from "./db";
 import type { D1Database } from "./env";
 import { calculateElo, STARTING_RATING } from "./elo";
 import type { MatchRow, RatingSnapshot } from "./types";
@@ -14,7 +6,7 @@ import type { MatchRow, RatingSnapshot } from "./types";
 export async function recalculateRatings(db: D1Database) {
   const [matches, players] = await Promise.all([listMatches(db), listPlayers(db)]);
   const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
-  await clearAllSnapshots(db);
+  const snapshots: RatingSnapshot[] = [];
 
   for (const match of [...matches].reverse()) {
     const teamA = [match.teamAPlayer1Id, match.teamAPlayer2Id].map((id) => ({
@@ -31,12 +23,11 @@ export async function recalculateRatings(db: D1Database) {
       winningTeam: match.winningTeam,
       isTiebreak: match.isTiebreak === 1
     });
-    await replaceSnapshots(
-      db,
-      results.map((result) => ({ matchId: match.id, ...result }))
-    );
+    snapshots.push(...results.map((result) => ({ matchId: match.id, ...result })));
     results.forEach((result) => ratings.set(result.playerId, result.postRating));
   }
+
+  await replaceAllSnapshots(db, snapshots);
 }
 
 export async function getRankings(db: D1Database) {

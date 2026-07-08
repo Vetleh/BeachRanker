@@ -240,19 +240,17 @@ export async function snapshotsForMatch(db: D1Database, matchId: string) {
   return results;
 }
 
-export async function replaceSnapshots(db: D1Database, snapshots: Array<RatingSnapshot & { id?: string }>) {
-  for (const snapshot of snapshots) {
-    await db
-      .prepare(
-        "INSERT INTO rating_snapshots (id, matchId, playerId, preRating, postRating, delta) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .bind(createId(), snapshot.matchId, snapshot.playerId, snapshot.preRating, snapshot.postRating, snapshot.delta)
-      .run();
-  }
-}
-
-export async function clearAllSnapshots(db: D1Database) {
-  await db.prepare("DELETE FROM rating_snapshots").run();
+export async function replaceAllSnapshots(db: D1Database, snapshots: RatingSnapshot[]) {
+  await db.batch([
+    db.prepare("DELETE FROM rating_snapshots"),
+    ...snapshots.map((snapshot) =>
+      db
+        .prepare(
+          "INSERT INTO rating_snapshots (id, matchId, playerId, preRating, postRating, delta) VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind(createId(), snapshot.matchId, snapshot.playerId, snapshot.preRating, snapshot.postRating, snapshot.delta)
+    )
+  ]);
 }
 
 function insertSetStatement(
