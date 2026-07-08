@@ -9,6 +9,16 @@ import { formatMatch, getMatches, getRankings, recalculateRatings } from "./rati
 
 const router = Router();
 const requireAdmin = requireRole(Role.ADMIN);
+const loginAttempts = new Map<string, LoginAttempt>();
+const loginWindowMs = 15 * 60 * 1000;
+const loginLockMs = 15 * 60 * 1000;
+const maxLoginAttempts = 5;
+
+type LoginAttempt = {
+  count: number;
+  resetAt: number;
+  lockedUntil: number;
+};
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -40,16 +50,59 @@ function routeParam(value: string | string[] | undefined, name: string) {
   return value;
 }
 
+function loginAttemptKey(ip: string | undefined, email: string) {
+  return `${ip ?? "unknown"}:${email.toLowerCase()}`;
+}
+
+function assertLoginAllowed(key: string) {
+  const attempt = loginAttempts.get(key);
+  if (!attempt) {
+    return;
+  }
+
+  const now = Date.now();
+  if (attempt.lockedUntil > now) {
+    throw new ApiError(429, "Too many login attempts. Try again later.");
+  }
+
+  if (attempt.resetAt <= now) {
+    loginAttempts.delete(key);
+  }
+}
+
+function recordFailedLogin(key: string) {
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+  const next =
+    !current || current.resetAt <= now
+      ? { count: 1, resetAt: now + loginWindowMs, lockedUntil: 0 }
+      : { ...current, count: current.count + 1 };
+
+  if (next.count >= maxLoginAttempts) {
+    next.lockedUntil = now + loginLockMs;
+  }
+
+  loginAttempts.set(key, next);
+}
+
+function clearLoginAttempts(key: string) {
+  loginAttempts.delete(key);
+}
+
 router.post(
   "/auth/login",
   asyncHandler(async (req, res) => {
     const input = loginSchema.parse(req.body);
+    const attemptKey = loginAttemptKey(req.ip, input.email);
+    assertLoginAllowed(attemptKey);
     const user = await prisma.user.findUnique({ where: { email: input.email } });
 
     if (!user || !user.active || !(await verifyPassword(input.password, user.passwordHash))) {
+      recordFailedLogin(attemptKey);
       throw new ApiError(401, "Invalid email or password");
     }
 
+    clearLoginAttempts(attemptKey);
     setAuthCookie(res, user.id);
     return res.json({
       user: {
