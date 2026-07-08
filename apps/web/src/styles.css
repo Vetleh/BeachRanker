@@ -459,6 +459,10 @@ select {
   gap: 16px;
 }
 
+.admin-grid {
+  align-items: start;
+}
+
 .score-grid {
   display: grid;
   gap: 10px;
