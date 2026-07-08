@@ -220,7 +220,17 @@ export async function listSets(db: D1Database, matchId: string) {
 
 export async function listSnapshots(db: D1Database) {
   const { results } = await db
-    .prepare("SELECT matchId, playerId, preRating, postRating, delta FROM rating_snapshots")
+    .prepare(
+      `SELECT
+          rs.matchId,
+          rs.playerId,
+          rs.preRating,
+          rs.postRating,
+          rs.delta
+        FROM rating_snapshots rs
+        JOIN matches m ON m.id = rs.matchId
+        ORDER BY m.playedAt ASC, m.createdAt ASC, rs.playerId ASC`
+    )
     .all<RatingSnapshot>();
   return results;
 }
