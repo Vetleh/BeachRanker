@@ -1,0 +1,104 @@
+{
+  "app": {
+    "tagline": "Individual Elo for doubles beach volleyball.",
+    "loading": "Loading BeachRanker...",
+    "language": "Language",
+    "english": "English",
+    "norwegian": "Norwegian"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "loginFailed": "Login failed",
+    "logout": "Log out"
+  },
+  "tabs": {
+    "rankings": "Rankings",
+    "matches": "Matches",
+    "addMatch": "Add Match",
+    "correctMatch": "Correct Match",
+    "admin": "Admin"
+  },
+  "rankings": {
+    "title": "Rankings",
+    "subtitle": "{count} ranked players",
+    "rank": "Rank",
+    "player": "Player",
+    "elo": "Elo",
+    "record": "Record",
+    "played": "Played",
+    "last": "Last"
+  },
+  "matches": {
+    "myTitle": "My Matches",
+    "mySubtitle": "{count} matches you played in",
+    "historyTitle": "Match History",
+    "historySubtitle": "{count} saved matches",
+    "empty": "No matches found.",
+    "tiebreak": "Tiebreak",
+    "enteredBy": "Entered by {name}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "teamA": "Team A",
+    "teamB": "Team B",
+    "playerMatchesTitle": "{name}'s Matches",
+    "playerMatchesSubtitle": "{count} matches played",
+    "loading": "Loading matches..."
+  },
+  "profile": {
+    "backToRankings": "Rankings",
+    "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
+  },
+  "matchForm": {
+    "addTitle": "Add Match",
+    "correctTitle": "Correct Match",
+    "winner": "Current winner: Team {team}",
+    "instructions": "Enter scores for each completed set",
+    "cancelEdit": "Cancel edit",
+    "playedOn": "Played on",
+    "teamA": "Team A",
+    "teamB": "Team B",
+    "teamAPlayer": "Team A player {number}",
+    "teamBPlayer": "Team B player {number}",
+    "set": "Set {number}",
+    "teamAPoints": "Set {number} Team A points",
+    "teamBPoints": "Set {number} Team B points",
+    "addSet": "Add set",
+    "removeSet": "Remove set",
+    "saveMatch": "Save match",
+    "saveCorrection": "Save correction",
+    "selectFourUnique": "Select four unique players.",
+    "scoresNeedWinner": "Set scores must produce a winner.",
+    "saveFailed": "Could not save match"
+  },
+  "playerSelect": {
+    "search": "Search player",
+    "clear": "Clear selection",
+    "alreadySelected": "Already selected",
+    "empty": "No players found",
+    "options": "{label} options"
+  },
+  "admin": {
+    "addPlayerTitle": "Add Player",
+    "addPlayerDescription": "Players can be ranked before they have login accounts.",
+    "playerName": "Player name",
+    "addPlayerButton": "Add player",
+    "playerAdded": "Player added.",
+    "createUserTitle": "Create User",
+    "createUserDescription": "Give friends access and optionally link them to a player profile.",
+    "displayName": "Display name",
+    "temporaryPassword": "Temporary password",
+    "role": "Role",
+    "playerRole": "Player",
+    "adminRole": "Admin",
+    "linkedPlayer": "Linked player",
+    "noLinkedPlayer": "No linked player",
+    "userCreated": "User account created.",
+    "createUserButton": "Create user"
+  },
+  "errors": {
+    "loadProfile": "Could not load player profile",
+    "requestFailed": "Request failed"
+  }
+}

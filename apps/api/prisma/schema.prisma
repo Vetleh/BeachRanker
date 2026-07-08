@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
+
+enum TeamSide {
+  A
+  B
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  displayName  String
+  passwordHash String
+  role         Role     @default(PLAYER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  player         Player?
+  enteredMatches Match[] @relation("EnteredMatches")
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  userId    String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  snapshots  RatingSnapshot[]
+  asTeamA1   Match[]          @relation("TeamA1")
+  asTeamA2   Match[]          @relation("TeamA2")
+  asTeamB1   Match[]          @relation("TeamB1")
+  asTeamB2   Match[]          @relation("TeamB2")
+}
+
+model Match {
+  id             String   @id @default(cuid())
+  playedAt       DateTime
+  winningTeam    TeamSide
+  isTiebreak     Boolean  @default(false)
+  enteredByUserId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  teamAPlayer1Id String
+  teamAPlayer2Id String
+  teamBPlayer1Id String
+  teamBPlayer2Id String
+
+  enteredBy    User   @relation("EnteredMatches", fields: [enteredByUserId], references: [id], onDelete: Restrict)
+  teamAPlayer1 Player @relation("TeamA1", fields: [teamAPlayer1Id], references: [id], onDelete: Restrict)
+  teamAPlayer2 Player @relation("TeamA2", fields: [teamAPlayer2Id], references: [id], onDelete: Restrict)
+  teamBPlayer1 Player @relation("TeamB1", fields: [teamBPlayer1Id], references: [id], onDelete: Restrict)
+  teamBPlayer2 Player @relation("TeamB2", fields: [teamBPlayer2Id], references: [id], onDelete: Restrict)
+  sets         MatchSet[]
+  snapshots   RatingSnapshot[]
+
+  @@index([playedAt, createdAt])
+}
+
+model MatchSet {
+  id          String @id @default(cuid())
+  matchId     String
+  setNumber   Int
+  teamAPoints Int
+  teamBPoints Int
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, setNumber])
+}
+
+model RatingSnapshot {
+  id         String @id @default(cuid())
+  matchId    String
+  playerId   String
+  preRating  Int
+  postRating Int
+  delta      Int
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+}

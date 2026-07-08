@@ -1,0 +1,104 @@
+{
+  "app": {
+    "tagline": "Individuell Elo for sandvolleyball double.",
+    "loading": "Laster BeachRanker...",
+    "language": "Språk",
+    "english": "Engelsk",
+    "norwegian": "Norsk"
+  },
+  "auth": {
+    "email": "E-post",
+    "password": "Passord",
+    "signIn": "Logg inn",
+    "loginFailed": "Innlogging feilet",
+    "logout": "Logg ut"
+  },
+  "tabs": {
+    "rankings": "Rangering",
+    "matches": "Kamper",
+    "addMatch": "Legg til kamp",
+    "correctMatch": "Korriger kamp",
+    "admin": "Admin"
+  },
+  "rankings": {
+    "title": "Rangering",
+    "subtitle": "{count} rangerte spillere",
+    "rank": "Plass",
+    "player": "Spiller",
+    "elo": "Elo",
+    "record": "Resultat",
+    "played": "Spilt",
+    "last": "Sist"
+  },
+  "matches": {
+    "myTitle": "Mine kamper",
+    "mySubtitle": "{count} kamper du har spilt",
+    "historyTitle": "Kamphistorikk",
+    "historySubtitle": "{count} lagrede kamper",
+    "empty": "Ingen kamper funnet.",
+    "tiebreak": "Tiebreak",
+    "enteredBy": "Registrert av {name}",
+    "edit": "Rediger",
+    "delete": "Slett",
+    "teamA": "Lag A",
+    "teamB": "Lag B",
+    "playerMatchesTitle": "{name} sine kamper",
+    "playerMatchesSubtitle": "{count} spilte kamper",
+    "loading": "Laster kamper..."
+  },
+  "profile": {
+    "backToRankings": "Rangering",
+    "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
+  },
+  "matchForm": {
+    "addTitle": "Legg til kamp",
+    "correctTitle": "Korriger kamp",
+    "winner": "Nåværende vinner: Lag {team}",
+    "instructions": "Legg inn poeng for hvert ferdigspilte sett",
+    "cancelEdit": "Avbryt redigering",
+    "playedOn": "Spilt dato",
+    "teamA": "Lag A",
+    "teamB": "Lag B",
+    "teamAPlayer": "Lag A spiller {number}",
+    "teamBPlayer": "Lag B spiller {number}",
+    "set": "Sett {number}",
+    "teamAPoints": "Sett {number} poeng Lag A",
+    "teamBPoints": "Sett {number} poeng Lag B",
+    "addSet": "Legg til sett",
+    "removeSet": "Fjern sett",
+    "saveMatch": "Lagre kamp",
+    "saveCorrection": "Lagre korrigering",
+    "selectFourUnique": "Velg fire unike spillere.",
+    "scoresNeedWinner": "Settscorene må gi en vinner.",
+    "saveFailed": "Kunne ikke lagre kampen"
+  },
+  "playerSelect": {
+    "search": "Søk etter spiller",
+    "clear": "Tøm valg",
+    "alreadySelected": "Allerede valgt",
+    "empty": "Ingen spillere funnet",
+    "options": "{label} valg"
+  },
+  "admin": {
+    "addPlayerTitle": "Legg til spiller",
+    "addPlayerDescription": "Spillere kan rangeres før de har brukerkonto.",
+    "playerName": "Spillernavn",
+    "addPlayerButton": "Legg til spiller",
+    "playerAdded": "Spiller lagt til.",
+    "createUserTitle": "Opprett bruker",
+    "createUserDescription": "Gi venner tilgang og koble dem eventuelt til en spillerprofil.",
+    "displayName": "Visningsnavn",
+    "temporaryPassword": "Midlertidig passord",
+    "role": "Rolle",
+    "playerRole": "Spiller",
+    "adminRole": "Admin",
+    "linkedPlayer": "Tilknyttet spiller",
+    "noLinkedPlayer": "Ingen tilknyttet spiller",
+    "userCreated": "Brukerkonto opprettet.",
+    "createUserButton": "Opprett bruker"
+  },
+  "errors": {
+    "loadProfile": "Kunne ikke laste spillerprofil",
+    "requestFailed": "Forespørselen feilet"
+  }
+}

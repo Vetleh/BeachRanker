@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "beach-ranker",
+  "account_id": "e4178ed91c11c8b0623b99e373f1380b",
+  "main": "apps/worker/src/index.ts",
+  "compatibility_date": "2026-07-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "assets": {
+    "directory": "./apps/web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beach-ranker",
+      "database_id": "8d2f0b85-5065-4859-b3e1-6a1b5d151c77",
+      "migrations_dir": "apps/worker/migrations"
+    }
+  ]
+}
