@@ -1,3 +1,4 @@
+import { loginRateLimit } from "@beach-ranker/domain/policy";
 import { ApiError } from "./http";
 
 type LoginAttempt = {
@@ -7,9 +8,6 @@ type LoginAttempt = {
 };
 
 const loginAttempts = new Map<string, LoginAttempt>();
-const loginWindowMs = 15 * 60 * 1000;
-const loginLockMs = 15 * 60 * 1000;
-const maxLoginAttempts = 5;
 
 export function loginAttemptKey(request: Request, email: string) {
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -38,11 +36,11 @@ export function recordFailedLogin(key: string) {
   const current = loginAttempts.get(key);
   const next =
     !current || current.resetAt <= now
-      ? { count: 1, resetAt: now + loginWindowMs, lockedUntil: 0 }
+      ? { count: 1, resetAt: now + loginRateLimit.windowMs, lockedUntil: 0 }
       : { ...current, count: current.count + 1 };
 
-  if (next.count >= maxLoginAttempts) {
-    next.lockedUntil = now + loginLockMs;
+  if (next.count >= loginRateLimit.maxAttempts) {
+    next.lockedUntil = now + loginRateLimit.lockMs;
   }
 
   loginAttempts.set(key, next);
