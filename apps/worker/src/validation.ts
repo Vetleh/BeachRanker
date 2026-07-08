@@ -53,7 +53,7 @@ export function parsePasswordReset(input: unknown) {
 
 export function parseMatch(input: unknown): MatchInput {
   const body = object(input);
-  const playedAt = string(body.playedAt, "playedAt");
+  const playedAt = isoDateString(body.playedAt, "playedAt");
   const teamAPlayerIds = stringArray(body.teamAPlayerIds, "teamAPlayerIds", 2);
   const teamBPlayerIds = stringArray(body.teamBPlayerIds, "teamBPlayerIds", 2);
   const sets = array(body.sets, "sets").map(parseSet);
@@ -132,6 +132,20 @@ function string(input: unknown, name: string) {
     throw new ApiError(400, `${name} is required`);
   }
   return input;
+}
+
+function isoDateString(input: unknown, name: string) {
+  const value = string(input, name);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+    throw new ApiError(400, `${name} must be an ISO timestamp`);
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new ApiError(400, `${name} must be a valid date`);
+  }
+
+  return date.toISOString();
 }
 
 function number(input: unknown, name: string) {
