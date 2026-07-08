@@ -136,8 +136,18 @@ export async function getRankings() {
     .map((player, index) => ({ rank: index + 1, ...player }));
 }
 
-export async function getMatches() {
+export async function getMatches(playerId?: string) {
   const matches = await prisma.match.findMany({
+    where: playerId
+      ? {
+          OR: [
+            { teamAPlayer1Id: playerId },
+            { teamAPlayer2Id: playerId },
+            { teamBPlayer1Id: playerId },
+            { teamBPlayer2Id: playerId }
+          ]
+        }
+      : undefined,
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
     include: {
       sets: { orderBy: { setNumber: "asc" } },

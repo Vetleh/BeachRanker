@@ -155,8 +155,21 @@ router.get(
 router.get(
   "/matches",
   requireAuth,
-  asyncHandler(async (_req, res) => {
-    const matches = await getMatches();
+  asyncHandler(async (req, res) => {
+    const requestedPlayerId = typeof req.query.playerId === "string" ? req.query.playerId : null;
+    if (requestedPlayerId) {
+      const matches = await getMatches(requestedPlayerId);
+      return res.json({ matches });
+    }
+
+    const player = await prisma.player.findUnique({
+      where: { userId: req.user!.id }
+    });
+    if (!player || !player.active) {
+      return res.json({ matches: [] });
+    }
+
+    const matches = await getMatches(player.id);
     return res.json({ matches });
   })
 );
