@@ -6,7 +6,7 @@ import { prisma } from "./db.js";
 import { ApiError, asyncHandler } from "./errors.js";
 import { assertLoginAllowed, clearLoginAttempts, loginAttemptKey, recordFailedLogin } from "./loginLimiter.js";
 import { deriveWinnerFromSets, matchInputSchema, validateUniquePlayers } from "./matchValidation.js";
-import { formatMatch, getMatches, getRankings, recalculateRatings } from "./ratingService.js";
+import { getMatches, getRankings, hydrateMatch, recalculateRatings } from "./ratingService.js";
 
 const router = Router();
 const requireAdmin = requireRole(Role.ADMIN);
@@ -220,20 +220,7 @@ router.post(
 
     await recalculateRatings();
 
-    const hydrated = await prisma.match.findUniqueOrThrow({
-      where: { id: match.id },
-      include: {
-        sets: { orderBy: { setNumber: "asc" } },
-        snapshots: true,
-        teamAPlayer1: true,
-        teamAPlayer2: true,
-        teamBPlayer1: true,
-        teamBPlayer2: true,
-        enteredBy: { select: { id: true, displayName: true } }
-      }
-    });
-
-    return res.status(201).json({ match: formatMatch(hydrated) });
+    return res.status(201).json({ match: await hydrateMatch(match.id) });
   })
 );
 
@@ -273,20 +260,7 @@ router.patch(
 
     await recalculateRatings();
 
-    const hydrated = await prisma.match.findUniqueOrThrow({
-      where: { id: matchId },
-      include: {
-        sets: { orderBy: { setNumber: "asc" } },
-        snapshots: true,
-        teamAPlayer1: true,
-        teamAPlayer2: true,
-        teamBPlayer1: true,
-        teamBPlayer2: true,
-        enteredBy: { select: { id: true, displayName: true } }
-      }
-    });
-
-    return res.json({ match: formatMatch(hydrated) });
+    return res.json({ match: await hydrateMatch(matchId) });
   })
 );
 

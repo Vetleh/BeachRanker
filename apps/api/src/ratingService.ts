@@ -15,6 +15,16 @@ type MatchWithSets = Match & {
   };
 };
 
+const matchInclude = {
+  sets: { orderBy: { setNumber: "asc" } },
+  snapshots: true,
+  teamAPlayer1: true,
+  teamAPlayer2: true,
+  teamBPlayer1: true,
+  teamBPlayer2: true,
+  enteredBy: { select: { id: true, displayName: true } }
+} as const;
+
 export async function recalculateRatings() {
   const players = await prisma.player.findMany();
   const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
@@ -159,18 +169,19 @@ export async function getMatches(playerId?: string) {
         }
       : undefined,
     orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }],
-    include: {
-      sets: { orderBy: { setNumber: "asc" } },
-      snapshots: true,
-      teamAPlayer1: true,
-      teamAPlayer2: true,
-      teamBPlayer1: true,
-      teamBPlayer2: true,
-      enteredBy: { select: { id: true, displayName: true } }
-    }
+    include: matchInclude
   });
 
   return matches.map(formatMatch);
+}
+
+export async function hydrateMatch(matchId: string) {
+  const match = await prisma.match.findUniqueOrThrow({
+    where: { id: matchId },
+    include: matchInclude
+  });
+
+  return formatMatch(match);
 }
 
 export function formatMatch(match: MatchWithSets) {
