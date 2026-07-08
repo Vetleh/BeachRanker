@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
+    "packages/domain",
     "apps/api",
     "apps/worker",
     "apps/web"
@@ -10,9 +11,9 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
     "dev:local": "bash scripts/dev-local.sh",
-    "build": "npm run build -w apps/api && npm run build -w apps/worker && npm run build -w apps/web",
-    "test": "npm run test -w apps/api && npm run test -w apps/worker && npm run test -w apps/web",
-    "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/worker && npm run typecheck -w apps/web",
+    "build": "npm run build -w packages/domain && npm run build -w apps/api && npm run build -w apps/worker && npm run build -w apps/web",
+    "test": "npm run test -w packages/domain && npm run test -w apps/api && npm run test -w apps/worker && npm run test -w apps/web",
+    "typecheck": "npm run typecheck -w packages/domain && npm run typecheck -w apps/api && npm run typecheck -w apps/worker && npm run typecheck -w apps/web",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
     "worker:dry-run": "wrangler deploy --dry-run",

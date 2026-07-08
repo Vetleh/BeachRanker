@@ -1,27 +1,12 @@
-import type { MatchSet, TeamSide } from "./types";
+import {
+  deriveWinnerFromSets,
+  formatScore,
+  type MatchSetScore,
+  type TeamSide
+} from "@beach-ranker/domain";
 
-export function deriveWinner(sets: MatchSet[]): TeamSide | null {
-  let teamAWins = 0;
-  let teamBWins = 0;
-
-  for (const set of sets) {
-    if (set.teamAPoints === set.teamBPoints) {
-      continue;
-    }
-    if (set.teamAPoints > set.teamBPoints) {
-      teamAWins += 1;
-    } else {
-      teamBWins += 1;
-    }
-  }
-
-  if (teamAWins === teamBWins) {
-    return null;
-  }
-
-  return teamAWins > teamBWins ? "A" : "B";
+export function deriveWinner(sets: MatchSetScore[]): TeamSide | null {
+  return deriveWinnerFromSets(sets);
 }
 
-export function formatScore(sets: MatchSet[]) {
-  return sets.map((set) => `${set.teamAPoints}-${set.teamBPoints}`).join(", ");
-}
+export { formatScore };

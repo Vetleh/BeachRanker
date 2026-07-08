@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  deriveWinnerFromSets as deriveDomainWinnerFromSets,
+  findTiedSetNumber,
+  hasUniquePlayers
+} from "@beach-ranker/domain/matchRules";
 import { ApiError } from "./errors.js";
 import type { TeamSide } from "./elo.js";
 
@@ -18,33 +23,21 @@ export const matchInputSchema = z.object({
 export type MatchInput = z.infer<typeof matchInputSchema>;
 
 export function deriveWinnerFromSets(sets: MatchInput["sets"]): TeamSide {
-  let teamAWins = 0;
-  let teamBWins = 0;
+  const tiedSetNumber = findTiedSetNumber(sets);
+  if (tiedSetNumber) {
+    throw new ApiError(400, `Set ${tiedSetNumber} cannot be tied`);
+  }
 
-  sets.forEach((set, index) => {
-    if (set.teamAPoints === set.teamBPoints) {
-      throw new ApiError(400, `Set ${index + 1} cannot be tied`);
-    }
-
-    if (set.teamAPoints > set.teamBPoints) {
-      teamAWins += 1;
-    } else {
-      teamBWins += 1;
-    }
-  });
-
-  if (teamAWins === teamBWins) {
+  const winner = deriveDomainWinnerFromSets(sets);
+  if (!winner) {
     throw new ApiError(400, "Set scores must produce a match winner");
   }
 
-  return teamAWins > teamBWins ? "A" : "B";
+  return winner;
 }
 
 export function validateUniquePlayers(teamAPlayerIds: string[], teamBPlayerIds: string[]) {
-  const playerIds = [...teamAPlayerIds, ...teamBPlayerIds];
-  const uniquePlayerIds = new Set(playerIds);
-
-  if (uniquePlayerIds.size !== playerIds.length) {
+  if (!hasUniquePlayers(teamAPlayerIds, teamBPlayerIds)) {
     throw new ApiError(400, "A player can only appear once in a match");
   }
 }

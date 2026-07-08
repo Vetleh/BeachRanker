@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@beach-ranker/domain": "0.1.0",
     "bcryptjs": "^2.4.3"
   },
   "devDependencies": {

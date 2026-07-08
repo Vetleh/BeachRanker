@@ -1,3 +1,8 @@
+import {
+  deriveWinnerFromSets as deriveDomainWinnerFromSets,
+  findTiedSetNumber,
+  hasUniquePlayers
+} from "@beach-ranker/domain/matchRules";
 import { ApiError } from "./http";
 import type { MatchInput, MatchSet, TeamSide } from "./types";
 
@@ -70,30 +75,20 @@ export function parseMatch(input: unknown): MatchInput {
 }
 
 export function deriveWinnerFromSets(sets: MatchSet[]): TeamSide {
-  let teamAWins = 0;
-  let teamBWins = 0;
-
-  for (const set of sets) {
-    if (set.teamAPoints === set.teamBPoints) {
-      throw new ApiError(400, "Set scores cannot be tied");
-    }
-    if (set.teamAPoints > set.teamBPoints) {
-      teamAWins += 1;
-    } else {
-      teamBWins += 1;
-    }
+  if (findTiedSetNumber(sets)) {
+    throw new ApiError(400, "Set scores cannot be tied");
   }
 
-  if (teamAWins === teamBWins) {
+  const winner = deriveDomainWinnerFromSets(sets);
+  if (!winner) {
     throw new ApiError(400, "Match must have a winning team");
   }
 
-  return teamAWins > teamBWins ? "A" : "B";
+  return winner;
 }
 
 export function validateUniquePlayers(teamAPlayerIds: string[], teamBPlayerIds: string[]) {
-  const playerIds = [...teamAPlayerIds, ...teamBPlayerIds];
-  if (new Set(playerIds).size !== playerIds.length) {
+  if (!hasUniquePlayers(teamAPlayerIds, teamBPlayerIds)) {
     throw new ApiError(400, "A player can only appear once in a match");
   }
 }
