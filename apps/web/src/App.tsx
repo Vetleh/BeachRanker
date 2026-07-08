@@ -17,6 +17,15 @@ import type { Match, MatchSet, Player, Ranking, Role, User } from "./types";
 
 type Tab = "rankings" | "matches" | "add" | "profile" | "admin";
 
+type AppRoute =
+  | { name: "rankings"; path: "/rankings" }
+  | { name: "matches"; path: "/matches" }
+  | { name: "newMatch"; path: "/matches/new" }
+  | { name: "editMatch"; path: string; matchId: string }
+  | { name: "player"; path: string; playerId: string }
+  | { name: "admin"; path: "/admin" }
+  | { name: "notFound"; path: string };
+
 const emptySets: MatchSet[] = [
   { teamAPoints: 21, teamBPoints: 18 },
   { teamAPoints: 21, teamBPoints: 18 }
@@ -32,13 +41,15 @@ export function App() {
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [profileMatches, setProfileMatches] = useState<Match[]>([]);
-  const [selectedProfile, setSelectedProfile] = useState<Ranking | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("rankings");
-  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const [route, navigate] = useBrowserRoute();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const t = (path: TranslationPath, values?: Record<string, string | number>) => translate(language, path, values);
+  const activeTab = getActiveTab(route);
+  const profilePlayerId = route.name === "player" ? route.playerId : "";
+  const selectedProfile = profilePlayerId ? rankings.find((player) => player.id === profilePlayerId) ?? null : null;
+  const editingMatch = route.name === "editMatch" ? matches.find((match) => match.id === route.matchId) ?? null : null;
 
   function changeLanguage(nextLanguage: Language) {
     setLanguage(nextLanguage);
@@ -84,24 +95,55 @@ export function App() {
     setRankings([]);
     setMatches([]);
     setProfileMatches([]);
-    setSelectedProfile(null);
+    navigate("/rankings", { replace: true });
   }
 
-  async function openPlayerProfile(player: Ranking) {
-    setSelectedProfile(player);
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (route.name === "notFound") {
+      navigate("/rankings", { replace: true });
+      return;
+    }
+
+    if (route.name === "admin" && user.role !== "ADMIN") {
+      navigate("/rankings", { replace: true });
+    }
+  }, [navigate, route.name, user]);
+
+  useEffect(() => {
+    if (route.name !== "player" || !user || !selectedProfile) {
+      return;
+    }
+
+    let isCurrent = true;
     setProfileMatches([]);
     setProfileLoading(true);
-    setActiveTab("profile");
 
-    try {
-      const result = await api.matches(player.id);
-      setProfileMatches(result.matches);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("errors.loadProfile"));
-    } finally {
-      setProfileLoading(false);
-    }
-  }
+    api
+      .matches(profilePlayerId)
+      .then((result) => {
+        if (isCurrent) {
+          setProfileMatches(result.matches);
+        }
+      })
+      .catch((err: Error) => {
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : t("errors.loadProfile"));
+        }
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setProfileLoading(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [route.name, profilePlayerId, selectedProfile?.id, user]);
 
   if (loading) {
     return <div className="centered">{t("app.loading")}</div>;
@@ -144,16 +186,14 @@ export function App() {
           .filter((tab) => !tab.adminOnly || user.role === "ADMIN")
           .map((tab) => {
             const Icon = tab.icon;
-            if (tab.id === "profile") {
-              return null;
-            }
+            const path = tab.id === "add" ? "/matches/new" : `/${tab.id}`;
 
             return (
               <button
                 className={activeTab === tab.id ? "tab active" : "tab"}
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigate(path)}
               >
                 <Icon size={18} />
                 <span>{tab.label}</span>
@@ -169,52 +209,141 @@ export function App() {
       )}
 
       <main>
-        {activeTab === "rankings" && <RankingsView rankings={rankings} onViewPlayer={openPlayerProfile} t={t} />}
-        {activeTab === "matches" && (
+        {route.name === "rankings" && (
+          <RankingsView rankings={rankings} onViewPlayer={(player) => navigate(`/players/${player.id}`)} t={t} />
+        )}
+        {route.name === "matches" && (
           <MatchesView
             matches={matches}
             title={t("matches.myTitle")}
             subtitle={t("matches.mySubtitle", { count: matches.length })}
             canEdit={user.role === "ADMIN"}
             t={t}
-            onEdit={(match) => {
-              setEditingMatch(match);
-              setActiveTab("add");
-            }}
+            onEdit={(match) => navigate(`/matches/${match.id}/edit`)}
             onDelete={async (matchId) => {
               await api.deleteMatch(matchId);
               await refreshData();
             }}
           />
         )}
-        {activeTab === "profile" && selectedProfile && (
-          <PlayerProfileView
-            player={selectedProfile}
-            matches={profileMatches}
-            loading={profileLoading}
-            t={t}
-            onBack={() => setActiveTab("rankings")}
-          />
+        {route.name === "player" &&
+          (selectedProfile ? (
+            <PlayerProfileView
+              player={selectedProfile}
+              matches={profileMatches}
+              loading={profileLoading}
+              t={t}
+              onBack={() => navigate("/rankings")}
+            />
+          ) : (
+            <section className="surface">
+              <p className="empty-state">{rankings.length === 0 ? t("matches.loading") : t("errors.loadProfile")}</p>
+            </section>
+          ))}
+        {(route.name === "newMatch" || route.name === "editMatch") && (
+          route.name === "editMatch" && !editingMatch ? (
+            <section className="surface">
+              <p className="empty-state">{matches.length === 0 ? t("matches.loading") : t("errors.loadProfile")}</p>
+            </section>
+          ) : (
+            <MatchForm
+              players={players}
+              editingMatch={editingMatch}
+              t={t}
+              onCancelEdit={() => navigate("/matches")}
+              onSaved={async () => {
+                await refreshData();
+                navigate("/matches");
+              }}
+            />
+          )
         )}
-        {activeTab === "add" && (
-          <MatchForm
-            players={players}
-            editingMatch={editingMatch}
-            t={t}
-            onCancelEdit={() => setEditingMatch(null)}
-            onSaved={async () => {
-              setEditingMatch(null);
-              await refreshData();
-              setActiveTab("matches");
-            }}
-          />
-        )}
-        {activeTab === "admin" && user.role === "ADMIN" && (
-          <AdminView players={players} t={t} onChanged={refreshData} />
-        )}
+        {route.name === "admin" && user.role === "ADMIN" && <AdminView players={players} t={t} onChanged={refreshData} />}
       </main>
     </div>
   );
+}
+
+function useBrowserRoute(): [AppRoute, (path: string, options?: { replace?: boolean }) => void] {
+  const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
+
+  useEffect(() => {
+    function handlePopState() {
+      setRoute(parseRoute(window.location.pathname));
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigate = useMemo(
+    () => (path: string, options: { replace?: boolean } = {}) => {
+      const nextPath = normalizePath(path);
+      if (nextPath === window.location.pathname) {
+        setRoute(parseRoute(nextPath));
+        return;
+      }
+
+      if (options.replace) {
+        window.history.replaceState(null, "", nextPath);
+      } else {
+        window.history.pushState(null, "", nextPath);
+      }
+      setRoute(parseRoute(nextPath));
+    },
+    []
+  );
+
+  return [route, navigate];
+}
+
+function parseRoute(pathname: string): AppRoute {
+  const path = normalizePath(pathname);
+  if (path === "/" || path === "/rankings") {
+    return { name: "rankings", path: "/rankings" };
+  }
+  if (path === "/matches") {
+    return { name: "matches", path: "/matches" };
+  }
+  if (path === "/matches/new") {
+    return { name: "newMatch", path: "/matches/new" };
+  }
+  if (path === "/admin") {
+    return { name: "admin", path: "/admin" };
+  }
+
+  const editMatch = path.match(/^\/matches\/([^/]+)\/edit$/);
+  if (editMatch?.[1]) {
+    return { name: "editMatch", path, matchId: decodeURIComponent(editMatch[1]) };
+  }
+
+  const player = path.match(/^\/players\/([^/]+)$/);
+  if (player?.[1]) {
+    return { name: "player", path, playerId: decodeURIComponent(player[1]) };
+  }
+
+  return { name: "notFound", path };
+}
+
+function normalizePath(path: string) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return normalized.length > 1 ? normalized.replace(/\/+$/, "") : normalized;
+}
+
+function getActiveTab(route: AppRoute): Tab {
+  if (route.name === "matches") {
+    return "matches";
+  }
+  if (route.name === "newMatch" || route.name === "editMatch") {
+    return "add";
+  }
+  if (route.name === "admin") {
+    return "admin";
+  }
+  if (route.name === "player") {
+    return "profile";
+  }
+  return "rankings";
 }
 
 function getStoredLanguage() {
