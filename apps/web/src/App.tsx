@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useId, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarPlus,
@@ -15,6 +15,7 @@ import { translate, type Language, type TranslationPath } from "./i18n";
 import { getActiveTab, useBrowserRoute, type Tab } from "./router";
 import { deriveWinner, formatScore } from "./score";
 import type { Match, MatchSet, Player, Ranking, Role, User } from "./types";
+import { useAppData } from "./useAppData";
 
 const emptySets: MatchSet[] = [
   { teamAPoints: 21, teamBPoints: 18 },
@@ -26,15 +27,22 @@ export function App() {
     const saved = getStoredLanguage();
     return saved === "en" || saved === "no" ? saved : "no";
   });
-  const [user, setUser] = useState<User | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [rankings, setRankings] = useState<Ranking[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [profileMatches, setProfileMatches] = useState<Match[]>([]);
-  const [profileLoading, setProfileLoading] = useState(false);
   const [route, navigate] = useBrowserRoute();
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const showError = useCallback((message: string) => setError(message), []);
+  const {
+    loading,
+    user,
+    setUser,
+    players,
+    rankings,
+    matches,
+    profileMatches,
+    profileLoading,
+    refreshData,
+    logout,
+    loadProfileMatches
+  } = useAppData(showError);
   const t = (path: TranslationPath, values?: Record<string, string | number>) => translate(language, path, values);
   const activeTab = getActiveTab(route);
   const profilePlayerId = route.name === "player" ? route.playerId : "";
@@ -46,45 +54,8 @@ export function App() {
     storeLanguage(nextLanguage);
   }
 
-  useEffect(() => {
-    api
-      .me()
-      .then(({ user }) => {
-        setUser(user);
-      })
-      .catch(() => {
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  async function refreshData() {
-    const [playersResult, rankingsResult, matchesResult] = await Promise.all([
-      api.players(),
-      api.rankings(),
-      api.matches()
-    ]);
-
-    setPlayers(playersResult.players);
-    setRankings(rankingsResult.rankings);
-    setMatches(matchesResult.matches);
-  }
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    refreshData().catch((err: Error) => setError(err.message));
-  }, [user]);
-
   async function handleLogout() {
-    await api.logout();
-    setUser(null);
-    setPlayers([]);
-    setRankings([]);
-    setMatches([]);
-    setProfileMatches([]);
+    await logout();
     navigate("/rankings", { replace: true });
   }
 
@@ -108,32 +79,8 @@ export function App() {
       return;
     }
 
-    let isCurrent = true;
-    setProfileMatches([]);
-    setProfileLoading(true);
-
-    api
-      .matches(profilePlayerId)
-      .then((result) => {
-        if (isCurrent) {
-          setProfileMatches(result.matches);
-        }
-      })
-      .catch((err: Error) => {
-        if (isCurrent) {
-          setError(err instanceof Error ? err.message : t("errors.loadProfile"));
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setProfileLoading(false);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [route.name, profilePlayerId, selectedProfile?.id, user]);
+    return loadProfileMatches(profilePlayerId, t("errors.loadProfile"));
+  }, [loadProfileMatches, route.name, profilePlayerId, selectedProfile?.id, user]);
 
   if (loading) {
     return <div className="centered">{t("app.loading")}</div>;
