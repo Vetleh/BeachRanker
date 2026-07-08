@@ -84,6 +84,20 @@ describe("match player selection", () => {
     expect(teamBPlayer1).toHaveValue("");
   });
 
+  it("selects player options with the keyboard", async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /add match/i }));
+
+    const teamAPlayer1 = screen.getByRole("combobox", { name: "Team A player 1" });
+    fireEvent.focus(teamAPlayer1);
+    fireEvent.change(teamAPlayer1, { target: { value: "bob" } });
+    fireEvent.keyDown(teamAPlayer1, { key: "ArrowDown" });
+    fireEvent.keyDown(teamAPlayer1, { key: "Enter" });
+
+    expect(teamAPlayer1).toHaveValue("Bob Berg");
+  });
+
   it("marks a match as tiebreak only when a third set is added", async () => {
     render(<App />);
 

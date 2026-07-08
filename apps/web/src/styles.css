@@ -427,6 +427,7 @@ select {
 }
 
 .player-option:hover,
+.player-option.active,
 .player-option[aria-selected="true"] {
   background: #edf3eb;
 }

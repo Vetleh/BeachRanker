@@ -708,6 +708,7 @@ function PlayerSearchSelect({
   const listboxId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeIndex, setActiveIndex] = useState(-1);
   const selectedPlayer = players.find((player) => player.id === value);
   const blockedPlayerIds = useMemo(
     () => new Set(selectedPlayerIds.filter((playerId) => playerId && playerId !== value)),
@@ -715,6 +716,12 @@ function PlayerSearchSelect({
   );
   const normalizedSearch = search.trim().toLowerCase();
   const visiblePlayers = players.filter((player) => player.name.toLowerCase().includes(normalizedSearch));
+  const optionCount = visiblePlayers.length + (value ? 1 : 0);
+  const activeOptionId = activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
+
+  useEffect(() => {
+    setActiveIndex(optionCount > 0 ? 0 : -1);
+  }, [optionCount, search]);
 
   function selectPlayer(playerId: string) {
     if (blockedPlayerIds.has(playerId)) {
@@ -723,7 +730,46 @@ function PlayerSearchSelect({
 
     onChange(playerId);
     setSearch("");
+    setActiveIndex(-1);
     setIsOpen(false);
+  }
+
+  function clearPlayer() {
+    onChange("");
+    setSearch("");
+    setActiveIndex(-1);
+    setIsOpen(false);
+  }
+
+  function selectActiveOption() {
+    if (!isOpen || activeIndex < 0) {
+      return;
+    }
+
+    if (value && activeIndex === 0) {
+      clearPlayer();
+      return;
+    }
+
+    const playerIndex = activeIndex - (value ? 1 : 0);
+    const player = visiblePlayers[playerIndex];
+    if (player) {
+      selectPlayer(player.id);
+    }
+  }
+
+  function moveActiveOption(direction: 1 | -1) {
+    if (optionCount === 0) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    setActiveIndex((current) => {
+      if (current < 0) {
+        return direction === 1 ? 0 : optionCount - 1;
+      }
+      return (current + direction + optionCount) % optionCount;
+    });
   }
 
   return (
@@ -734,6 +780,7 @@ function PlayerSearchSelect({
         aria-label={label}
         aria-expanded={isOpen}
         aria-controls={listboxId}
+        aria-activedescendant={activeOptionId}
         aria-autocomplete="list"
         placeholder={t("playerSelect.search")}
         value={isOpen ? search : selectedPlayer?.name ?? ""}
@@ -745,15 +792,33 @@ function PlayerSearchSelect({
           setSearch(event.target.value);
           setIsOpen(true);
         }}
-        onBlur={() => {
-          window.setTimeout(() => {
-            setSearch("");
-            setIsOpen(false);
-          }, 100);
+        onBlur={(event) => {
+          const nextFocus = event.relatedTarget;
+          if (nextFocus instanceof Node && event.currentTarget.parentElement?.contains(nextFocus)) {
+            return;
+          }
+
+          setSearch("");
+          setActiveIndex(-1);
+          setIsOpen(false);
         }}
         onKeyDown={(event) => {
-          if (event.key === "Escape") {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setIsOpen(true);
+            moveActiveOption(1);
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setIsOpen(true);
+            moveActiveOption(-1);
+          } else if (event.key === "Enter") {
+            if (isOpen && activeIndex >= 0) {
+              event.preventDefault();
+              selectActiveOption();
+            }
+          } else if (event.key === "Escape") {
             setSearch("");
+            setActiveIndex(-1);
             setIsOpen(false);
           }
         }}
@@ -765,25 +830,32 @@ function PlayerSearchSelect({
               className="player-option muted"
               type="button"
               role="option"
+              id={`${listboxId}-option-0`}
               aria-selected={false}
               onMouseDown={(event) => {
                 event.preventDefault();
-                onChange("");
-                setSearch("");
-                setIsOpen(false);
+                clearPlayer();
               }}
             >
               {t("playerSelect.clear")}
             </button>
           )}
-          {visiblePlayers.map((player) => {
+          {visiblePlayers.map((player, index) => {
             const isBlocked = blockedPlayerIds.has(player.id);
+            const optionIndex = index + (value ? 1 : 0);
             return (
               <button
-                className={isBlocked ? "player-option disabled" : "player-option"}
+                className={[
+                  "player-option",
+                  isBlocked ? "disabled" : "",
+                  activeIndex === optionIndex ? "active" : ""
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 key={player.id}
                 type="button"
                 role="option"
+                id={`${listboxId}-option-${optionIndex}`}
                 aria-disabled={isBlocked}
                 aria-selected={player.id === value}
                 onMouseDown={(event) => {
