@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { api, type MatchPayload } from "./api";
 import { translate, type Language, type TranslationPath } from "./i18n";
-import { getActiveTab, useBrowserRoute, type Tab } from "./router";
+import { getActiveTab, useBrowserRoute, type RankingGender, type Tab } from "./router";
 import { deriveWinner, formatScore } from "./score";
 import type { Match, MatchSet, Player, PlayerGender, Ranking, Role, User } from "./types";
 import { useAppData } from "./useAppData";
@@ -125,7 +125,7 @@ export function App() {
           .filter((tab) => !tab.adminOnly || user.role === "ADMIN")
           .map((tab) => {
             const Icon = tab.icon;
-            const path = tab.id === "add" ? "/matches/new" : `/${tab.id}`;
+            const path = tab.id === "rankings" ? "/rankings/men" : tab.id === "add" ? "/matches/new" : `/${tab.id}`;
 
             return (
               <button
@@ -149,7 +149,13 @@ export function App() {
 
       <main>
         {route.name === "rankings" && (
-          <RankingsView rankings={rankings} onViewPlayer={(player) => navigate(`/players/${player.id}`)} t={t} />
+          <RankingsView
+            gender={route.gender}
+            rankings={rankings}
+            onNavigate={navigate}
+            onViewPlayer={(player) => navigate(`/players/${player.id}`)}
+            t={t}
+          />
         )}
         {route.name === "matches" && (
           <MatchesView
@@ -172,7 +178,7 @@ export function App() {
               matches={profileMatches}
               loading={profileLoading}
               t={t}
-              onBack={() => navigate("/rankings")}
+              onBack={() => navigate(`/rankings/${selectedProfile.gender === "WOMEN" ? "women" : "men"}`)}
             />
           ) : (
             <section className="surface">
@@ -308,34 +314,30 @@ function LoginScreen({
 }
 
 function RankingsView({
+  gender,
   rankings,
+  onNavigate,
   onViewPlayer,
   t
 }: {
+  gender: RankingGender;
   rankings: Ranking[];
+  onNavigate: (path: string) => void;
   onViewPlayer: (player: Ranking) => void;
   t: Translator;
 }) {
-  const menRankings = rankings.filter((player) => player.gender === "MEN");
-  const womenRankings = rankings.filter((player) => player.gender === "WOMEN");
+  const visibleRankings = rankings.filter((player) => player.gender === gender);
 
   return (
-    <div className="ranking-sections">
-      <RankingTable
-        rankings={menRankings}
-        title={t("rankings.menTitle")}
-        subtitle={t("rankings.subtitle", { count: menRankings.length })}
-        onViewPlayer={onViewPlayer}
-        t={t}
-      />
-      <RankingTable
-        rankings={womenRankings}
-        title={t("rankings.womenTitle")}
-        subtitle={t("rankings.subtitle", { count: womenRankings.length })}
-        onViewPlayer={onViewPlayer}
-        t={t}
-      />
-    </div>
+    <RankingTable
+      rankings={visibleRankings}
+      title={gender === "MEN" ? t("rankings.menTitle") : t("rankings.womenTitle")}
+      subtitle={t("rankings.subtitle", { count: visibleRankings.length })}
+      gender={gender}
+      onNavigate={onNavigate}
+      onViewPlayer={onViewPlayer}
+      t={t}
+    />
   );
 }
 
@@ -343,12 +345,16 @@ function RankingTable({
   rankings,
   title,
   subtitle,
+  gender,
+  onNavigate,
   onViewPlayer,
   t
 }: {
   rankings: Ranking[];
   title: string;
   subtitle: string;
+  gender: RankingGender;
+  onNavigate: (path: string) => void;
   onViewPlayer: (player: Ranking) => void;
   t: Translator;
 }) {
@@ -358,6 +364,26 @@ function RankingTable({
         <div>
           <h2>{title}</h2>
           <p>{subtitle}</p>
+        </div>
+        <div className="ranking-switch" role="tablist" aria-label={t("rankings.switchLabel")}>
+          <button
+            className={gender === "MEN" ? "active" : ""}
+            type="button"
+            role="tab"
+            aria-selected={gender === "MEN"}
+            onClick={() => onNavigate("/rankings/men")}
+          >
+            {t("rankings.men")}
+          </button>
+          <button
+            className={gender === "WOMEN" ? "active" : ""}
+            type="button"
+            role="tab"
+            aria-selected={gender === "WOMEN"}
+            onClick={() => onNavigate("/rankings/women")}
+          >
+            {t("rankings.women")}
+          </button>
         </div>
       </div>
       <div className="table-wrap">

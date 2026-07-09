@@ -3,8 +3,10 @@ import { getActiveTab, parseRoute } from "../router";
 
 describe("router", () => {
   it("parses top-level routes", () => {
-    expect(parseRoute("/")).toEqual({ name: "rankings", path: "/rankings" });
-    expect(parseRoute("/rankings")).toEqual({ name: "rankings", path: "/rankings" });
+    expect(parseRoute("/")).toEqual({ name: "rankings", path: "/rankings/men", gender: "MEN" });
+    expect(parseRoute("/rankings")).toEqual({ name: "rankings", path: "/rankings/men", gender: "MEN" });
+    expect(parseRoute("/rankings/men")).toEqual({ name: "rankings", path: "/rankings/men", gender: "MEN" });
+    expect(parseRoute("/rankings/women")).toEqual({ name: "rankings", path: "/rankings/women", gender: "WOMEN" });
     expect(parseRoute("/matches")).toEqual({ name: "matches", path: "/matches" });
     expect(parseRoute("/matches/new")).toEqual({ name: "newMatch", path: "/matches/new" });
     expect(parseRoute("/admin")).toEqual({ name: "admin", path: "/admin" });

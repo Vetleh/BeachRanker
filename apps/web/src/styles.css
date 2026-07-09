@@ -197,17 +197,33 @@ button:disabled {
   padding: 20px;
 }
 
-.ranking-sections {
-  display: grid;
-  gap: 18px;
-}
-
 .section-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.ranking-switch {
+  display: flex;
+  gap: 6px;
+  padding: 3px;
+  border: 1px solid #d9e1d7;
+  border-radius: 8px;
+  background: #f5f7f2;
+}
+
+.ranking-switch button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 6px;
+  color: #4d5d55;
+}
+
+.ranking-switch button.active {
+  color: #ffffff;
+  background: #19705f;
 }
 
 .section-heading.compact {

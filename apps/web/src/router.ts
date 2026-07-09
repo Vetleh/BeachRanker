@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
+export type RankingGender = "MEN" | "WOMEN";
 export type Tab = "rankings" | "matches" | "add" | "profile" | "admin";
 
 export type AppRoute =
-  | { name: "rankings"; path: "/rankings" }
+  | { name: "rankings"; path: "/rankings/men" | "/rankings/women"; gender: RankingGender }
   | { name: "matches"; path: "/matches" }
   | { name: "newMatch"; path: "/matches/new" }
   | { name: "editMatch"; path: string; matchId: string }
@@ -47,7 +48,13 @@ export function useBrowserRoute(): [AppRoute, (path: string, options?: { replace
 export function parseRoute(pathname: string): AppRoute {
   const path = normalizePath(pathname);
   if (path === "/" || path === "/rankings") {
-    return { name: "rankings", path: "/rankings" };
+    return { name: "rankings", path: "/rankings/men", gender: "MEN" };
+  }
+  if (path === "/rankings/men") {
+    return { name: "rankings", path: "/rankings/men", gender: "MEN" };
+  }
+  if (path === "/rankings/women") {
+    return { name: "rankings", path: "/rankings/women", gender: "WOMEN" };
   }
   if (path === "/matches") {
     return { name: "matches", path: "/matches" };
