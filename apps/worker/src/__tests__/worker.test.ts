@@ -41,6 +41,39 @@ describe("BeachRanker Worker API", () => {
     });
   });
 
+  it("creates players with a selected initial rating", async () => {
+    const login = await worker.fetch(
+      new Request("https://beachranker.test/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "admin@example.com", password: "change-me" })
+      }),
+      testEnv
+    );
+    const cookie = login.headers.get("set-cookie") ?? "";
+
+    const response = await worker.fetch(
+      new Request("https://beachranker.test/api/players", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ name: "Seeded Player", initialRating: 1800 })
+      }),
+      testEnv
+    );
+
+    expect(response.status).toBe(201);
+    expect(await json(response)).toMatchObject({
+      player: { name: "Seeded Player", initialRating: 1800 }
+    });
+
+    const rankingsResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/rankings", { headers: { cookie } }),
+      testEnv
+    );
+    const rankingsPayload = (await json(rankingsResponse)) as { rankings: Array<{ name: string; rating: number }> };
+    expect(rankingsPayload.rankings.find((player) => player.name === "Seeded Player")).toMatchObject({ rating: 1800 });
+  });
+
   it("creates a match and marks it as tiebreak when it has three sets", async () => {
     const login = await worker.fetch(
       new Request("https://beachranker.test/api/auth/login", {

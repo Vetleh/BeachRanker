@@ -22,6 +22,8 @@ const emptySets: MatchSet[] = [
   { teamAPoints: 21, teamBPoints: 18 }
 ];
 
+const initialRatingOptions = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000];
+
 export function App() {
   const [language, setLanguage] = useState<Language>(() => {
     const saved = getStoredLanguage();
@@ -877,6 +879,7 @@ function PlayerSearchSelect({
 
 function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator; onChanged: () => Promise<void> }) {
   const [playerName, setPlayerName] = useState("");
+  const [initialRating, setInitialRating] = useState(1500);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
@@ -887,8 +890,9 @@ function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator
   async function createPlayer(event: FormEvent) {
     event.preventDefault();
     setMessage("");
-    await api.createPlayer(playerName);
+    await api.createPlayer(playerName, initialRating);
     setPlayerName("");
+    setInitialRating(1500);
     setMessage(t("admin.playerAdded"));
     await onChanged();
   }
@@ -924,6 +928,16 @@ function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator
         <label>
           {t("admin.playerName")}
           <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} required />
+        </label>
+        <label>
+          {t("admin.initialRating")}
+          <select value={initialRating} onChange={(event) => setInitialRating(Number(event.target.value))}>
+            {initialRatingOptions.map((rating) => (
+              <option key={rating} value={rating}>
+                {t("admin.initialRatingOption", { rating })}
+              </option>
+            ))}
+          </select>
         </label>
         <button className="primary-button" type="submit">
           <Users size={18} />

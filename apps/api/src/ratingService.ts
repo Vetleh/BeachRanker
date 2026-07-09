@@ -27,7 +27,7 @@ const matchInclude = {
 
 export async function recalculateRatings() {
   const players = await prisma.player.findMany();
-  const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
+  const ratings = new Map(players.map((player) => [player.id, player.initialRating]));
   const snapshots: Array<{
     matchId: string;
     playerId: string;
@@ -90,7 +90,7 @@ export async function getRankings() {
     prisma.match.findMany()
   ]);
 
-  const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
+  const ratings = new Map(players.map((player) => [player.id, player.initialRating]));
   snapshots.forEach((snapshot) => {
     ratings.set(snapshot.playerId, snapshot.postRating);
   });

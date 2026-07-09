@@ -41,10 +41,10 @@ export const api = {
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/api/auth/me"),
   players: () => request<{ players: Player[] }>("/api/players"),
-  createPlayer: (name: string) =>
+  createPlayer: (name: string, initialRating: number) =>
     request<{ player: Player }>("/api/players", {
       method: "POST",
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, initialRating })
     }),
   createUser: (payload: {
     email: string;

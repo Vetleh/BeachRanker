@@ -18,6 +18,7 @@ export type Player = {
   id: string;
   name: string;
   active: number;
+  initialRating: number;
   userId?: string | null;
 };
 
@@ -60,4 +61,3 @@ export type RatingSnapshot = {
   postRating: number;
   delta: number;
 };
-

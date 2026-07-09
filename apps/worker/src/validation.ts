@@ -6,6 +6,8 @@ import {
 import { ApiError } from "./http";
 import type { MatchInput, MatchSet, TeamSide } from "./types";
 
+const INITIAL_RATING_OPTIONS = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000] as const;
+
 export function parseLogin(input: unknown) {
   const body = object(input);
   const email = string(body.email, "email");
@@ -23,7 +25,11 @@ export function parsePlayer(input: unknown) {
     throw new ApiError(400, "Player name is required");
   }
   const active = body.active === undefined ? undefined : Boolean(body.active);
-  return { name, active };
+  const initialRating = body.initialRating === undefined ? undefined : number(body.initialRating, "initialRating");
+  if (initialRating !== undefined && !INITIAL_RATING_OPTIONS.includes(initialRating as (typeof INITIAL_RATING_OPTIONS)[number])) {
+    throw new ApiError(400, "Invalid initial rating");
+  }
+  return { name, active, initialRating };
 }
 
 export function parsePlayerPatch(input: unknown) {

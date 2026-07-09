@@ -13,6 +13,7 @@ export type Player = {
   id: string;
   name: string;
   active: boolean;
+  initialRating: number;
 };
 
 export type Ranking = Player & {

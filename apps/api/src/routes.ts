@@ -10,14 +10,21 @@ import { getMatches, getRankings, hydrateMatch, recalculateRatings } from "./rat
 
 const router = Router();
 const requireAdmin = requireRole(Role.ADMIN);
+const initialRatingOptions = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000] as const;
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1)
 });
 
-const playerSchema = z.object({
+const playerCreateSchema = z.object({
   name: z.string().trim().min(1),
+  active: z.boolean().optional(),
+  initialRating: z.number().int().refine((rating) => initialRatingOptions.includes(rating as (typeof initialRatingOptions)[number])).optional()
+});
+
+const playerPatchSchema = z.object({
+  name: z.string().trim().min(1).optional(),
   active: z.boolean().optional()
 });
 
@@ -90,7 +97,7 @@ router.post(
   requireAuth,
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const input = playerSchema.parse(req.body);
+    const input = playerCreateSchema.parse(req.body);
     const player = await prisma.player.create({ data: input });
     return res.status(201).json({ player });
   })
@@ -101,7 +108,7 @@ router.patch(
   requireAuth,
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const input = playerSchema.partial().parse(req.body);
+    const input = playerPatchSchema.parse(req.body);
     const playerId = routeParam(req.params.id, "id");
     const player = await prisma.player.update({
       where: { id: playerId },

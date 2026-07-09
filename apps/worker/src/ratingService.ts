@@ -5,7 +5,7 @@ import type { MatchRow, RatingSnapshot } from "./types";
 
 export async function recalculateRatings(db: D1Database) {
   const [matches, players] = await Promise.all([listMatches(db), listPlayers(db)]);
-  const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
+  const ratings = new Map(players.map((player) => [player.id, player.initialRating]));
   const snapshots: RatingSnapshot[] = [];
 
   for (const match of [...matches].reverse()) {
@@ -32,7 +32,7 @@ export async function recalculateRatings(db: D1Database) {
 
 export async function getRankings(db: D1Database) {
   const [players, snapshots, matches] = await Promise.all([listPlayers(db), listSnapshots(db), listMatches(db)]);
-  const ratings = new Map(players.map((player) => [player.id, STARTING_RATING]));
+  const ratings = new Map(players.map((player) => [player.id, player.initialRating]));
   snapshots.forEach((snapshot) => ratings.set(snapshot.playerId, snapshot.postRating));
 
   const stats = new Map(

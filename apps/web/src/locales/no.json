@@ -83,6 +83,8 @@
     "addPlayerTitle": "Legg til spiller",
     "addPlayerDescription": "Spillere kan rangeres før de har brukerkonto.",
     "playerName": "Spillernavn",
+    "initialRating": "Start-rating",
+    "initialRatingOption": "{rating} Elo",
     "addPlayerButton": "Legg til spiller",
     "playerAdded": "Spiller lagt til.",
     "createUserTitle": "Opprett bruker",

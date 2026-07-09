@@ -1,5 +1,6 @@
 import { createId, nowIso } from "./crypto";
 import type { D1Database, D1PreparedStatement } from "./env";
+import { STARTING_RATING } from "./elo";
 import type { MatchInput, MatchRow, MatchSet, Player, RatingSnapshot, User } from "./types";
 
 export async function findUserByEmail(db: D1Database, email: string) {
@@ -11,29 +12,30 @@ export async function findUserByEmail(db: D1Database, email: string) {
 
 export async function listPlayers(db: D1Database) {
   const { results } = await db
-    .prepare("SELECT id, name, active, userId FROM players ORDER BY name ASC")
+    .prepare("SELECT id, name, active, initialRating, userId FROM players ORDER BY name ASC")
     .all<Player>();
   return results.map(formatPlayer);
 }
 
 export async function findPlayerByUserId(db: D1Database, userId: string) {
   return db
-    .prepare("SELECT id, name, active, userId FROM players WHERE userId = ?")
+    .prepare("SELECT id, name, active, initialRating, userId FROM players WHERE userId = ?")
     .bind(userId)
     .first<Player>();
 }
 
-export async function createPlayer(db: D1Database, input: { name: string; active?: boolean }) {
+export async function createPlayer(db: D1Database, input: { name: string; active?: boolean; initialRating?: number }) {
   const player = {
     id: createId(),
     name: input.name,
     active: input.active === false ? 0 : 1,
+    initialRating: input.initialRating ?? STARTING_RATING,
     createdAt: nowIso(),
     updatedAt: nowIso()
   };
   await db
-    .prepare("INSERT INTO players (id, name, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)")
-    .bind(player.id, player.name, player.active, player.createdAt, player.updatedAt)
+    .prepare("INSERT INTO players (id, name, active, initialRating, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)")
+    .bind(player.id, player.name, player.active, player.initialRating, player.createdAt, player.updatedAt)
     .run();
   return formatPlayer(player);
 }
@@ -72,7 +74,7 @@ export async function createUser(
 
 export async function updatePlayer(db: D1Database, playerId: string, input: { name?: string; active?: boolean }) {
   const current = await db
-    .prepare("SELECT id, name, active, userId FROM players WHERE id = ?")
+    .prepare("SELECT id, name, active, initialRating, userId FROM players WHERE id = ?")
     .bind(playerId)
     .first<Player>();
   if (!current) {
@@ -264,10 +266,11 @@ function insertSetStatement(
     .bind(createId(), matchId, setNumber, set.teamAPoints, set.teamBPoints);
 }
 
-function formatPlayer(player: Player | { id: string; name: string; active: number }) {
+function formatPlayer(player: Player | { id: string; name: string; active: number; initialRating?: number }) {
   return {
     id: player.id,
     name: player.name,
-    active: player.active === 1
+    active: player.active === 1,
+    initialRating: player.initialRating ?? STARTING_RATING
   };
 }
