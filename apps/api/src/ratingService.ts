@@ -38,10 +38,20 @@ export async function recalculateRatings() {
 
   const matches = await prisma.match.findMany({
     orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
-    include: { sets: true }
+    include: {
+      sets: true,
+      teamAPlayer1: true,
+      teamAPlayer2: true,
+      teamBPlayer1: true,
+      teamBPlayer2: true
+    }
   });
 
   for (const match of matches) {
+    if (!isRatedMatch([match.teamAPlayer1, match.teamAPlayer2, match.teamBPlayer1, match.teamBPlayer2])) {
+      continue;
+    }
+
     const teamA = [match.teamAPlayer1Id, match.teamAPlayer2Id].map((id) => ({
       id,
       rating: ratings.get(id) ?? STARTING_RATING
@@ -87,11 +97,24 @@ export async function getRankings() {
     prisma.ratingSnapshot.findMany({
       orderBy: [{ match: { playedAt: "asc" } }, { match: { createdAt: "asc" } }]
     }),
-    prisma.match.findMany()
+    prisma.match.findMany({
+      include: {
+        teamAPlayer1: true,
+        teamAPlayer2: true,
+        teamBPlayer1: true,
+        teamBPlayer2: true
+      }
+    })
   ]);
 
   const ratings = new Map(players.map((player) => [player.id, player.initialRating]));
-  snapshots.forEach((snapshot) => {
+  const ratedMatchIds = new Set(
+    matches
+      .filter((match) => isRatedMatch([match.teamAPlayer1, match.teamAPlayer2, match.teamBPlayer1, match.teamBPlayer2]))
+      .map((match) => match.id)
+  );
+  const ratedSnapshots = snapshots.filter((snapshot) => ratedMatchIds.has(snapshot.matchId));
+  ratedSnapshots.forEach((snapshot) => {
     ratings.set(snapshot.playerId, snapshot.postRating);
   });
 
@@ -103,6 +126,10 @@ export async function getRankings() {
   );
 
   for (const match of matches) {
+    if (!isRatedMatch([match.teamAPlayer1, match.teamAPlayer2, match.teamBPlayer1, match.teamBPlayer2])) {
+      continue;
+    }
+
     const teamAIds = [match.teamAPlayer1Id, match.teamAPlayer2Id];
     const teamBIds = [match.teamBPlayer1Id, match.teamBPlayer2Id];
     const winnerIds = match.winningTeam === "A" ? teamAIds : teamBIds;
@@ -128,7 +155,7 @@ export async function getRankings() {
     });
   }
 
-  snapshots.forEach((snapshot) => {
+  ratedSnapshots.forEach((snapshot) => {
     const playerStats = stats.get(snapshot.playerId);
     if (playerStats) {
       playerStats.recentDelta = snapshot.delta;
@@ -148,12 +175,16 @@ export async function getRankings() {
         id: player.id,
         name: player.name,
         active: player.active,
+        gender: player.gender,
         rating: ratings.get(player.id) ?? STARTING_RATING,
         ...playerStats
       };
     })
-    .sort((a, b) => b.rating - a.rating || b.wins - a.wins || a.name.localeCompare(b.name))
-    .map((player, index) => ({ rank: index + 1, ...player }));
+    .sort((a, b) => a.gender.localeCompare(b.gender) || b.rating - a.rating || b.wins - a.wins || a.name.localeCompare(b.name))
+    .map((player, _index, sortedPlayers) => ({
+      rank: sortedPlayers.filter((candidate) => candidate.gender === player.gender).findIndex((candidate) => candidate.id === player.id) + 1,
+      ...player
+    }));
 }
 
 export async function getMatches(playerId?: string) {
@@ -185,21 +216,24 @@ export async function hydrateMatch(matchId: string) {
 }
 
 export function formatMatch(match: MatchWithSets) {
+  const rated = isRatedMatch([match.teamAPlayer1, match.teamAPlayer2, match.teamBPlayer1, match.teamBPlayer2]);
+  const snapshots = rated ? match.snapshots : [];
   return {
     id: match.id,
     playedAt: match.playedAt,
     winningTeam: match.winningTeam,
     isTiebreak: match.isTiebreak,
+    rated,
     enteredBy: match.enteredBy,
     teamA: [match.teamAPlayer1, match.teamAPlayer2].map((player) => ({
       id: player.id,
       name: player.name,
-      delta: match.snapshots.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0
+      delta: snapshots.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0
     })),
     teamB: [match.teamBPlayer1, match.teamBPlayer2].map((player) => ({
       id: player.id,
       name: player.name,
-      delta: match.snapshots.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0
+      delta: snapshots.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0
     })),
     sets: match.sets.map((set) => ({
       id: set.id,
@@ -208,4 +242,8 @@ export function formatMatch(match: MatchWithSets) {
       teamBPoints: set.teamBPoints
     }))
   };
+}
+
+function isRatedMatch(players: Player[]) {
+  return players.every((player) => player.gender === players[0]?.gender);
 }

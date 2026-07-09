@@ -17,10 +17,10 @@ vi.mock("../api", () => ({
 }));
 
 const players = [
-  { id: "alice", name: "Alice Anders", active: true, initialRating: 1500 },
-  { id: "bob", name: "Bob Berg", active: true, initialRating: 1500 },
-  { id: "cara", name: "Cara Coast", active: true, initialRating: 1500 },
-  { id: "dan", name: "Dan Dune", active: true, initialRating: 1500 }
+  { id: "alice", name: "Alice Anders", active: true, initialRating: 1500, gender: "WOMEN" as const },
+  { id: "bob", name: "Bob Berg", active: true, initialRating: 1500, gender: "MEN" as const },
+  { id: "cara", name: "Cara Coast", active: true, initialRating: 1500, gender: "WOMEN" as const },
+  { id: "dan", name: "Dan Dune", active: true, initialRating: 1500, gender: "MEN" as const }
 ];
 
 function choosePlayer(label: string, playerName: string) {

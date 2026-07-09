@@ -14,7 +14,7 @@ import { api, type MatchPayload } from "./api";
 import { translate, type Language, type TranslationPath } from "./i18n";
 import { getActiveTab, useBrowserRoute, type Tab } from "./router";
 import { deriveWinner, formatScore } from "./score";
-import type { Match, MatchSet, Player, Ranking, Role, User } from "./types";
+import type { Match, MatchSet, Player, PlayerGender, Ranking, Role, User } from "./types";
 import { useAppData } from "./useAppData";
 
 const emptySets: MatchSet[] = [
@@ -316,12 +316,48 @@ function RankingsView({
   onViewPlayer: (player: Ranking) => void;
   t: Translator;
 }) {
+  const menRankings = rankings.filter((player) => player.gender === "MEN");
+  const womenRankings = rankings.filter((player) => player.gender === "WOMEN");
+
+  return (
+    <div className="ranking-sections">
+      <RankingTable
+        rankings={menRankings}
+        title={t("rankings.menTitle")}
+        subtitle={t("rankings.subtitle", { count: menRankings.length })}
+        onViewPlayer={onViewPlayer}
+        t={t}
+      />
+      <RankingTable
+        rankings={womenRankings}
+        title={t("rankings.womenTitle")}
+        subtitle={t("rankings.subtitle", { count: womenRankings.length })}
+        onViewPlayer={onViewPlayer}
+        t={t}
+      />
+    </div>
+  );
+}
+
+function RankingTable({
+  rankings,
+  title,
+  subtitle,
+  onViewPlayer,
+  t
+}: {
+  rankings: Ranking[];
+  title: string;
+  subtitle: string;
+  onViewPlayer: (player: Ranking) => void;
+  t: Translator;
+}) {
   return (
     <section className="surface">
       <div className="section-heading">
         <div>
-          <h2>{t("rankings.title")}</h2>
-          <p>{t("rankings.subtitle", { count: rankings.length })}</p>
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
         </div>
       </div>
       <div className="table-wrap">
@@ -396,6 +432,7 @@ function MatchesView({
           <div className="match-meta">
             <span>{new Date(match.playedAt).toLocaleDateString()}</span>
             {match.isTiebreak && <span className="badge">{t("matches.tiebreak")}</span>}
+            {!match.rated && <span className="badge">{t("matches.unrated")}</span>}
           </div>
           <div className="teams">
             <TeamLine label={t("matches.teamA")} players={match.teamA} winner={match.winningTeam === "A"} />
@@ -893,6 +930,7 @@ function PlayerSearchSelect({
 function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator; onChanged: () => Promise<void> }) {
   const [playerName, setPlayerName] = useState("");
   const [initialRating, setInitialRating] = useState(1500);
+  const [gender, setGender] = useState<PlayerGender>("MEN");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
@@ -903,9 +941,10 @@ function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator
   async function createPlayer(event: FormEvent) {
     event.preventDefault();
     setMessage("");
-    await api.createPlayer(playerName, initialRating);
+    await api.createPlayer(playerName, initialRating, gender);
     setPlayerName("");
     setInitialRating(1500);
+    setGender("MEN");
     setMessage(t("admin.playerAdded"));
     await onChanged();
   }
@@ -950,6 +989,13 @@ function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator
                 {t("admin.initialRatingOption", { rating })}
               </option>
             ))}
+          </select>
+        </label>
+        <label>
+          {t("admin.gender")}
+          <select value={gender} onChange={(event) => setGender(event.target.value as PlayerGender)}>
+            <option value="MEN">{t("admin.men")}</option>
+            <option value="WOMEN">{t("admin.women")}</option>
           </select>
         </label>
         <button className="primary-button" type="submit">

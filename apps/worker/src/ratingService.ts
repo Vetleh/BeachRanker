@@ -1,7 +1,7 @@
 import { listMatches, listPlayers, listSets, listSnapshots, replaceAllSnapshots, snapshotsForMatch } from "./db";
 import type { D1Database } from "./env";
 import { calculateElo, STARTING_RATING } from "./elo";
-import type { MatchRow, RatingSnapshot } from "./types";
+import type { MatchRow, PlayerGender, RatingSnapshot } from "./types";
 
 export async function recalculateRatings(db: D1Database) {
   const [matches, players] = await Promise.all([listMatches(db), listPlayers(db)]);
@@ -9,6 +9,10 @@ export async function recalculateRatings(db: D1Database) {
   const snapshots: RatingSnapshot[] = [];
 
   for (const match of [...matches].reverse()) {
+    if (!isRatedMatch(match)) {
+      continue;
+    }
+
     const teamA = [match.teamAPlayer1Id, match.teamAPlayer2Id].map((id) => ({
       id,
       rating: ratings.get(id) ?? STARTING_RATING
@@ -33,7 +37,9 @@ export async function recalculateRatings(db: D1Database) {
 export async function getRankings(db: D1Database) {
   const [players, snapshots, matches] = await Promise.all([listPlayers(db), listSnapshots(db), listMatches(db)]);
   const ratings = new Map(players.map((player) => [player.id, player.initialRating]));
-  snapshots.forEach((snapshot) => ratings.set(snapshot.playerId, snapshot.postRating));
+  const ratedMatchIds = new Set(matches.filter(isRatedMatch).map((match) => match.id));
+  const ratedSnapshots = snapshots.filter((snapshot) => ratedMatchIds.has(snapshot.matchId));
+  ratedSnapshots.forEach((snapshot) => ratings.set(snapshot.playerId, snapshot.postRating));
 
   const stats = new Map(
     players.map((player) => [
@@ -48,6 +54,10 @@ export async function getRankings(db: D1Database) {
   );
 
   for (const match of matches) {
+    if (!isRatedMatch(match)) {
+      continue;
+    }
+
     const teamAIds = [match.teamAPlayer1Id, match.teamAPlayer2Id];
     const teamBIds = [match.teamBPlayer1Id, match.teamBPlayer2Id];
     const winnerIds = match.winningTeam === "A" ? teamAIds : teamBIds;
@@ -73,7 +83,7 @@ export async function getRankings(db: D1Database) {
     });
   }
 
-  snapshots.forEach((snapshot) => {
+  ratedSnapshots.forEach((snapshot) => {
     const playerStats = stats.get(snapshot.playerId);
     if (playerStats) {
       playerStats.recentDelta = snapshot.delta;
@@ -85,27 +95,34 @@ export async function getRankings(db: D1Database) {
       id: player.id,
       name: player.name,
       active: player.active,
+      gender: player.gender,
       rating: ratings.get(player.id) ?? STARTING_RATING,
       ...(stats.get(player.id) ?? { matchesPlayed: 0, wins: 0, losses: 0, recentDelta: 0 })
     }))
-    .sort((left, right) => right.rating - left.rating || left.name.localeCompare(right.name))
-    .map((player, index) => ({ rank: index + 1, ...player }));
+    .sort((left, right) => left.gender.localeCompare(right.gender) || right.rating - left.rating || left.name.localeCompare(right.name))
+    .map((player, index, sortedPlayers) => ({
+      rank: sortedPlayers.filter((candidate) => candidate.gender === player.gender).findIndex((candidate) => candidate.id === player.id) + 1,
+      ...player
+    }));
 }
 
 export async function formatMatch(db: D1Database, match: MatchRow) {
   const [sets, snapshots] = await Promise.all([listSets(db, match.id), snapshotsForMatch(db, match.id)]);
+  const rated = isRatedMatch(match);
+  const ratingSnapshots = rated ? snapshots : [];
   return {
     id: match.id,
     playedAt: match.playedAt,
     winningTeam: match.winningTeam,
     isTiebreak: match.isTiebreak === 1,
+    rated,
     teamA: [
-      { id: match.teamAPlayer1Id, name: match.teamAPlayer1Name, deltaFor: snapshots },
-      { id: match.teamAPlayer2Id, name: match.teamAPlayer2Name, deltaFor: snapshots }
+      { id: match.teamAPlayer1Id, name: match.teamAPlayer1Name, deltaFor: ratingSnapshots },
+      { id: match.teamAPlayer2Id, name: match.teamAPlayer2Name, deltaFor: ratingSnapshots }
     ].map(formatMatchPlayer),
     teamB: [
-      { id: match.teamBPlayer1Id, name: match.teamBPlayer1Name, deltaFor: snapshots },
-      { id: match.teamBPlayer2Id, name: match.teamBPlayer2Name, deltaFor: snapshots }
+      { id: match.teamBPlayer1Id, name: match.teamBPlayer1Name, deltaFor: ratingSnapshots },
+      { id: match.teamBPlayer2Id, name: match.teamBPlayer2Name, deltaFor: ratingSnapshots }
     ].map(formatMatchPlayer),
     sets,
     enteredBy: {
@@ -131,4 +148,14 @@ function formatMatchPlayer(player: { id: string; name: string; deltaFor: RatingS
     name: player.name,
     delta: player.deltaFor.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0
   };
+}
+
+function isRatedMatch(match: MatchRow) {
+  const genders: PlayerGender[] = [
+    match.teamAPlayer1Gender ?? "MEN",
+    match.teamAPlayer2Gender ?? "MEN",
+    match.teamBPlayer1Gender ?? "MEN",
+    match.teamBPlayer2Gender ?? "MEN"
+  ];
+  return genders.every((gender) => gender === genders[0]);
 }

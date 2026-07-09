@@ -11,6 +11,7 @@ import { getMatches, getRankings, hydrateMatch, recalculateRatings } from "./rat
 const router = Router();
 const requireAdmin = requireRole(Role.ADMIN);
 const initialRatingOptions = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000] as const;
+const playerGenderSchema = z.enum(["MEN", "WOMEN"]);
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -20,7 +21,8 @@ const loginSchema = z.object({
 const playerCreateSchema = z.object({
   name: z.string().trim().min(1),
   active: z.boolean().optional(),
-  initialRating: z.number().int().refine((rating) => initialRatingOptions.includes(rating as (typeof initialRatingOptions)[number])).optional()
+  initialRating: z.number().int().refine((rating) => initialRatingOptions.includes(rating as (typeof initialRatingOptions)[number])).optional(),
+  gender: playerGenderSchema
 });
 
 const playerPatchSchema = z.object({

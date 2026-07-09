@@ -209,6 +209,10 @@ function hydrateMatches(tables: Map<string, Row[]>, playerId?: unknown) {
       teamAPlayer2Name: players.find((player) => player.id === match.teamAPlayer2Id)?.name,
       teamBPlayer1Name: players.find((player) => player.id === match.teamBPlayer1Id)?.name,
       teamBPlayer2Name: players.find((player) => player.id === match.teamBPlayer2Id)?.name,
+      teamAPlayer1Gender: players.find((player) => player.id === match.teamAPlayer1Id)?.gender ?? "MEN",
+      teamAPlayer2Gender: players.find((player) => player.id === match.teamAPlayer2Id)?.gender ?? "MEN",
+      teamBPlayer1Gender: players.find((player) => player.id === match.teamBPlayer1Id)?.gender ?? "MEN",
+      teamBPlayer2Gender: players.find((player) => player.id === match.teamBPlayer2Id)?.gender ?? "MEN",
       enteredByDisplayName: users.find((user) => user.id === match.enteredByUserId)?.displayName
     }));
 }

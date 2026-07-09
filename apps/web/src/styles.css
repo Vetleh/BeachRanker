@@ -197,6 +197,11 @@ button:disabled {
   padding: 20px;
 }
 
+.ranking-sections {
+  display: grid;
+  gap: 18px;
+}
+
 .section-heading {
   display: flex;
   align-items: flex-start;

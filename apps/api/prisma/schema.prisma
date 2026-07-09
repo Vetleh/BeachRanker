@@ -36,6 +36,7 @@ model Player {
   name          String   @unique
   active        Boolean  @default(true)
   initialRating Int      @default(1500)
+  gender        String   @default("MEN")
   userId        String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

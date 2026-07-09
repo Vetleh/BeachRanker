@@ -1,5 +1,6 @@
 export type Role = "ADMIN" | "PLAYER";
 export type TeamSide = "A" | "B";
+export type PlayerGender = "MEN" | "WOMEN";
 
 export type User = {
   id: string;
@@ -14,6 +15,7 @@ export type Player = {
   name: string;
   active: boolean;
   initialRating: number;
+  gender: PlayerGender;
 };
 
 export type Ranking = Player & {
@@ -43,6 +45,7 @@ export type Match = {
   playedAt: string;
   winningTeam: TeamSide;
   isTiebreak: boolean;
+  rated: boolean;
   teamA: MatchPlayer[];
   teamB: MatchPlayer[];
   sets: MatchSet[];

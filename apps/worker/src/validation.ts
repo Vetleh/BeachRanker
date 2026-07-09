@@ -7,6 +7,7 @@ import { ApiError } from "./http";
 import type { MatchInput, MatchSet, TeamSide } from "./types";
 
 const INITIAL_RATING_OPTIONS = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000] as const;
+const PLAYER_GENDERS = ["MEN", "WOMEN"] as const;
 
 export function parseLogin(input: unknown) {
   const body = object(input);
@@ -26,10 +27,11 @@ export function parsePlayer(input: unknown) {
   }
   const active = body.active === undefined ? undefined : Boolean(body.active);
   const initialRating = body.initialRating === undefined ? undefined : number(body.initialRating, "initialRating");
+  const gender = parsePlayerGender(body.gender);
   if (initialRating !== undefined && !INITIAL_RATING_OPTIONS.includes(initialRating as (typeof INITIAL_RATING_OPTIONS)[number])) {
     throw new ApiError(400, "Invalid initial rating");
   }
-  return { name, active, initialRating };
+  return { name, active, initialRating, gender };
 }
 
 export function parsePlayerPatch(input: unknown) {
@@ -111,6 +113,13 @@ function object(input: unknown): Record<string, unknown> {
     throw new ApiError(400, "Invalid input");
   }
   return input as Record<string, unknown>;
+}
+
+function parsePlayerGender(input: unknown) {
+  if (!PLAYER_GENDERS.includes(input as (typeof PLAYER_GENDERS)[number])) {
+    throw new ApiError(400, "Player gender is required");
+  }
+  return input as (typeof PLAYER_GENDERS)[number];
 }
 
 function array(input: unknown, name: string) {

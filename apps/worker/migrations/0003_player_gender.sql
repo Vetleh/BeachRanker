@@ -1,0 +1,1 @@
+ALTER TABLE players ADD COLUMN gender TEXT NOT NULL DEFAULT 'MEN' CHECK (gender IN ('MEN', 'WOMEN'));

@@ -1,5 +1,6 @@
 export type Role = "ADMIN" | "PLAYER";
 export type TeamSide = "A" | "B";
+export type PlayerGender = "MEN" | "WOMEN";
 
 export type User = {
   id: string;
@@ -19,6 +20,7 @@ export type Player = {
   name: string;
   active: number;
   initialRating: number;
+  gender: PlayerGender;
   userId?: string | null;
 };
 
@@ -51,6 +53,10 @@ export type MatchRow = {
   teamAPlayer2Name: string;
   teamBPlayer1Name: string;
   teamBPlayer2Name: string;
+  teamAPlayer1Gender: PlayerGender;
+  teamAPlayer2Gender: PlayerGender;
+  teamBPlayer1Gender: PlayerGender;
+  teamBPlayer2Gender: PlayerGender;
   enteredByDisplayName: string;
 };
 
