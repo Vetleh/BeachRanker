@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarPlus,
@@ -774,6 +774,15 @@ function PlayerSearchSelect({
     });
   }
 
+  function handleOptionKeyDown(event: KeyboardEvent, action: () => void) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    action();
+  }
+
   return (
     <div className="player-select">
       <input
@@ -838,6 +847,8 @@ function PlayerSearchSelect({
                 event.preventDefault();
                 clearPlayer();
               }}
+              onClick={clearPlayer}
+              onKeyDown={(event) => handleOptionKeyDown(event, clearPlayer)}
             >
               {t("playerSelect.clear")}
             </button>
@@ -864,6 +875,8 @@ function PlayerSearchSelect({
                   event.preventDefault();
                   selectPlayer(player.id);
                 }}
+                onClick={() => selectPlayer(player.id)}
+                onKeyDown={(event) => handleOptionKeyDown(event, () => selectPlayer(player.id))}
               >
                 <span>{player.name}</span>
                 {isBlocked && <span className="option-note">{t("playerSelect.alreadySelected")}</span>}
