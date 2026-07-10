@@ -13,10 +13,14 @@ export function parseLogin(input: unknown) {
   const body = object(input);
   const email = string(body.email, "email");
   const password = string(body.password, "password");
+  const authMode = body.authMode === undefined ? "cookie" : body.authMode;
   if (!email.includes("@")) {
     throw new ApiError(400, "Invalid email");
   }
-  return { email, password };
+  if (authMode !== "cookie" && authMode !== "bearer") {
+    throw new ApiError(400, "Invalid auth mode");
+  }
+  return { email, password, authMode };
 }
 
 export function parsePlayer(input: unknown) {

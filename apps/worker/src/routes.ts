@@ -1,6 +1,7 @@
 import {
   clearSessionCookie,
   createSessionCookie,
+  createSessionToken,
   getAuthUser,
   hashPassword,
   requireAdmin,
@@ -24,7 +25,7 @@ import {
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson, requireString } from "./http";
 import { assertLoginAllowed, clearLoginAttempts, loginAttemptKey, recordFailedLogin } from "./loginLimiter";
-import { formatMatch, getMatchesForPlayer, getRankings, recalculateRatings } from "./ratingService";
+import { formatMatch, getMatches, getMatchesForPlayer, getRankings, recalculateRatings } from "./ratingService";
 import {
   deriveWinnerFromSets,
   parseLogin,
@@ -84,15 +85,19 @@ async function login({ request, env }: RouteContext) {
   }
 
   clearLoginAttempts(attemptKey);
+  const responseUser = {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role
+  };
+
+  if (input.authMode === "bearer") {
+    return json({ user: responseUser, token: await createSessionToken(env, user.id) });
+  }
+
   return json(
-    {
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        role: user.role
-      }
-    },
+    { user: responseUser },
     { headers: { "set-cookie": await createSessionCookie(env, user.id) } }
   );
 }
@@ -171,6 +176,11 @@ async function matches({ request, env }: RouteContext) {
   }
 
   const player = await findPlayerByUserId(env.DB, user.id);
+
+  if (user.role === "ADMIN" && (!player || player.active !== 1)) {
+    return json({ matches: await getMatches(env.DB) });
+  }
+
   if (!player || player.active !== 1) {
     return json({ matches: [] });
   }

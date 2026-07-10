@@ -137,4 +137,19 @@ describe("match player selection", () => {
       ]
     });
   });
+
+  it("keeps cleared score inputs empty until they lose focus", async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /add match/i }));
+
+    const teamAPoints = screen.getByRole("spinbutton", { name: "Set 1 Team A points" });
+    fireEvent.change(teamAPoints, { target: { value: "" } });
+
+    expect(teamAPoints).toHaveValue(null);
+
+    fireEvent.blur(teamAPoints);
+
+    expect(teamAPoints).toHaveValue(0);
+  });
 });

@@ -150,6 +150,18 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
+  const updatePlayerUser = sql.match(/^UPDATE players SET userId = \?, updatedAt = \? WHERE id = \?/i);
+  if (updatePlayerUser) {
+    const player = getTable(tables, "players").find((row) => row.id === values[2]);
+    if (player) {
+      Object.assign(player, {
+        userId: values[0],
+        updatedAt: values[1]
+      });
+    }
+    return;
+  }
+
   throw new Error(`Unsupported write SQL: ${sql}`);
 }
 

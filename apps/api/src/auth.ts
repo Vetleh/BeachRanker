@@ -32,15 +32,19 @@ export async function verifyPassword(password: string, hash: string) {
 }
 
 export function setAuthCookie(res: Response, userId: string) {
-  const token = jwt.sign({ sub: userId } satisfies TokenPayload, config.jwtSecret, {
-    expiresIn: tokenMaxAgeSeconds
-  });
+  const token = createSessionToken(userId);
 
   res.cookie(cookieName, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: tokenMaxAgeSeconds * 1000
+  });
+}
+
+export function createSessionToken(userId: string) {
+  return jwt.sign({ sub: userId } satisfies TokenPayload, config.jwtSecret, {
+    expiresIn: tokenMaxAgeSeconds
   });
 }
 

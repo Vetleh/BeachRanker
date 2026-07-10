@@ -4,6 +4,7 @@ dist
 .env.local
 .dev.vars
 .wrangler
+apps/mobile/.expo/
 .DS_Store
 coverage
 .vite

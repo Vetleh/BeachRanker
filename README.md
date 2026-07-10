@@ -45,6 +45,32 @@ npm run dev
 
 The frontend runs on `http://localhost:5173` and proxies API requests to `http://localhost:4000`.
 
+## Mobile local development
+
+The mobile app uses an Expo development build. The QR code from `npm run ios:local` is not an Expo Go QR code, so install the development build on the target device first:
+
+```sh
+npm run ios:dev-build:local
+```
+
+The local iOS build script enables Xcode provisioning updates so Xcode can register the connected iPhone and create/download the development provisioning profile. It defaults to the current development team and device; override them when needed:
+
+```sh
+APPLE_TEAM_ID=YOURTEAMID IOS_DEVICE_ID=YOUR_DEVICE_UDID npm run ios:dev-build:local
+```
+
+On the first physical-device install, iOS may install the app but refuse to launch it until the development profile is trusted. On the iPhone, open `Settings > General > VPN & Device Management`, trust the Apple Development profile for the Apple ID/team, then rerun `npm run ios:dev-build:local`.
+
+If you select a simulator, the build is installed only on that simulator. To use the QR code on a physical iPhone, connect that iPhone and select it when installing the development build.
+
+After the development build is installed, start the local Worker and Expo dev server:
+
+```sh
+npm run ios:local
+```
+
+Scan the QR code with the installed BeachRanker development app or the iOS camera. If iOS says "no usable data found", the development build is not installed for this project yet, or the installed build is stale and needs to be rebuilt.
+
 ## Cloudflare deployment
 
 The Cloudflare-native deployment uses `apps/worker` as the production runtime. It serves the built Vite app from `apps/web/dist` and handles `/api/*` requests with Cloudflare Workers + D1.

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { Role } from "@prisma/client";
 import { z } from "zod";
-import { clearAuthCookie, hashPassword, requireAuth, requireRole, setAuthCookie, verifyPassword } from "./auth.js";
+import { clearAuthCookie, createSessionToken, hashPassword, requireAuth, requireRole, setAuthCookie, verifyPassword } from "./auth.js";
 import { prisma } from "./db.js";
 import { ApiError, asyncHandler } from "./errors.js";
 import { assertLoginAllowed, clearLoginAttempts, loginAttemptKey, recordFailedLogin } from "./loginLimiter.js";
@@ -71,7 +71,8 @@ router.post(
         email: user.email,
         displayName: user.displayName,
         role: user.role
-      }
+      },
+      token: createSessionToken(user.id)
     });
   })
 );
@@ -179,6 +180,12 @@ router.get(
     const player = await prisma.player.findUnique({
       where: { userId: req.user!.id }
     });
+
+    if (req.user!.role === "ADMIN" && (!player || !player.active)) {
+      const matches = await getMatches();
+      return res.json({ matches });
+    }
+
     if (!player || !player.active) {
       return res.json({ matches: [] });
     }

@@ -21,12 +21,16 @@ export async function verifyPassword(password: string, hash: string) {
 }
 
 export async function createSessionCookie(env: Env, userId: string) {
+  const token = await createSessionToken(env, userId);
+  return `${cookieName}=${token}; Max-Age=${tokenMaxAgeSeconds}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+}
+
+export async function createSessionToken(env: Env, userId: string) {
   const payload: TokenPayload = {
     sub: userId,
     exp: Math.floor(Date.now() / 1000) + tokenMaxAgeSeconds
   };
-  const token = await signToken(env.JWT_SECRET, payload);
-  return `${cookieName}=${token}; Max-Age=${tokenMaxAgeSeconds}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+  return signToken(env.JWT_SECRET, payload);
 }
 
 export function clearSessionCookie() {

@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "BeachRanker",
+    "slug": "beach-ranker",
+    "scheme": "beachranker",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vetleh.beachranker"
+    },
+    "android": {
+      "package": "com.vetleh.beachranker"
+    },
+    "extra": {
+      "apiBaseUrl": ""
+    }
+  }
+}

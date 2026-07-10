@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="BeachRanker">
+  <rect width="1024" height="1024" fill="#19705f" />
+  <circle cx="512" cy="512" r="320" fill="#ffffff" />
+  <path d="M224 544c128-32 224-128 256-320" fill="none" stroke="#19705f" stroke-width="64" stroke-linecap="round" />
+  <path d="M512 224c32 160 128 256 288 288" fill="none" stroke="#19705f" stroke-width="64" stroke-linecap="round" />
+  <path d="M288 736c128-128 304-160 512-96" fill="none" stroke="#19705f" stroke-width="64" stroke-linecap="round" />
+</svg>

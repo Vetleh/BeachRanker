@@ -22,6 +22,13 @@ const emptySets: MatchSet[] = [
   { teamAPoints: 21, teamBPoints: 18 }
 ];
 
+type EditableScore = number | "";
+type ScoreField = "teamAPoints" | "teamBPoints";
+type EditableMatchSet = {
+  teamAPoints: EditableScore;
+  teamBPoints: EditableScore;
+};
+
 const initialRatingOptions = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000];
 
 export function App() {
@@ -588,7 +595,7 @@ function MatchForm({
   const [playedAt, setPlayedAt] = useState(new Date().toISOString().slice(0, 10));
   const [teamAPlayerIds, setTeamAPlayerIds] = useState<string[]>(["", ""]);
   const [teamBPlayerIds, setTeamBPlayerIds] = useState<string[]>(["", ""]);
-  const [sets, setSets] = useState<MatchSet[]>(emptySets);
+  const [sets, setSets] = useState<EditableMatchSet[]>(emptySets);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -602,7 +609,8 @@ function MatchForm({
     setSets(editingMatch.sets.map((set) => ({ teamAPoints: set.teamAPoints, teamBPoints: set.teamBPoints })));
   }, [editingMatch]);
 
-  const winner = deriveWinner(sets);
+  const numericSets = useMemo(() => normalizeSets(sets), [sets]);
+  const winner = deriveWinner(numericSets);
   const isTiebreak = sets.length >= 3;
   const selectedPlayerIds = [...teamAPlayerIds, ...teamBPlayerIds];
 
@@ -615,9 +623,15 @@ function MatchForm({
     setter((current) => current.map((value, currentIndex) => (currentIndex === index ? playerId : value)));
   }
 
-  function updateSet(index: number, key: keyof MatchSet, value: number) {
+  function updateSet(index: number, key: ScoreField, value: string) {
     setSets((current) =>
-      current.map((set, currentIndex) => (currentIndex === index ? { ...set, [key]: value } : set))
+      current.map((set, currentIndex) => (currentIndex === index ? { ...set, [key]: parseEditableScore(value) } : set))
+    );
+  }
+
+  function commitSet(index: number, key: ScoreField) {
+    setSets((current) =>
+      current.map((set, currentIndex) => (currentIndex === index && set[key] === "" ? { ...set, [key]: 0 } : set))
     );
   }
 
@@ -640,7 +654,7 @@ function MatchForm({
       playedAt: new Date(`${playedAt}T12:00:00`).toISOString(),
       teamAPlayerIds,
       teamBPlayerIds,
-      sets,
+      sets: numericSets,
       isTiebreak
     };
 
@@ -717,14 +731,16 @@ function MatchForm({
                 type="number"
                 min="0"
                 value={set.teamAPoints}
-                onChange={(event) => updateSet(index, "teamAPoints", Number(event.target.value))}
+                onBlur={() => commitSet(index, "teamAPoints")}
+                onChange={(event) => updateSet(index, "teamAPoints", event.target.value)}
                 aria-label={t("matchForm.teamAPoints", { number: index + 1 })}
               />
               <input
                 type="number"
                 min="0"
                 value={set.teamBPoints}
-                onChange={(event) => updateSet(index, "teamBPoints", Number(event.target.value))}
+                onBlur={() => commitSet(index, "teamBPoints")}
+                onChange={(event) => updateSet(index, "teamBPoints", event.target.value)}
                 aria-label={t("matchForm.teamBPoints", { number: index + 1 })}
               />
             </div>
@@ -753,6 +769,22 @@ function MatchForm({
       </form>
     </section>
   );
+}
+
+function parseEditableScore(value: string): EditableScore {
+  if (value === "") {
+    return "";
+  }
+
+  const score = Number(value);
+  return Number.isFinite(score) ? score : "";
+}
+
+function normalizeSets(sets: EditableMatchSet[]): MatchSet[] {
+  return sets.map((set) => ({
+    teamAPoints: set.teamAPoints === "" ? 0 : set.teamAPoints,
+    teamBPoints: set.teamBPoints === "" ? 0 : set.teamBPoints
+  }));
 }
 
 function PlayerSearchSelect({

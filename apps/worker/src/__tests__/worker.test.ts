@@ -36,9 +36,38 @@ describe("BeachRanker Worker API", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toContain("beachranker_session=");
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
-    expect(await json(response)).toMatchObject({
+    const payload = await json(response);
+    expect(payload).toMatchObject({
       user: { email: "admin@example.com", displayName: "Beach Admin", role: "ADMIN" }
     });
+    expect(payload).not.toHaveProperty("token");
+  });
+
+  it("returns a bearer token only when explicitly requested", async () => {
+    const response = await worker.fetch(
+      new Request("https://beachranker.test/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "admin@example.com", password: "change-me", authMode: "bearer" })
+      }),
+      testEnv
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    const payload = await json(response);
+    expect(payload).toMatchObject({
+      token: expect.any(String),
+      user: { email: "admin@example.com", displayName: "Beach Admin", role: "ADMIN" }
+    });
+
+    const meResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/auth/me", {
+        headers: { authorization: `Bearer ${String(payload.token)}` }
+      }),
+      testEnv
+    );
+    expect(meResponse.status).toBe(200);
   });
 
   it("creates players with a selected initial rating", async () => {
@@ -256,17 +285,43 @@ describe("BeachRanker Worker API", () => {
     await postMatch("2026-07-03T12:00:00.000Z", [players.Alice, players.Bob], [players.Cara, players.Dan]);
     await postMatch("2026-07-04T12:00:00.000Z", [players["Beach Admin"], players.Alice], [players.Bob, players.Cara]);
 
-    const ownMatchesResponse = await worker.fetch(
-      new Request("https://beachranker.test/api/matches", { headers: { cookie } }),
+    const createPlayerResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/users", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          email: "dan.player@example.com",
+          displayName: "Dan Player",
+          password: "change-me-too",
+          role: "PLAYER",
+          playerId: players.Dan
+        })
+      }),
       testEnv
     );
-    const ownMatches = (await json(ownMatchesResponse)) as { matches: Array<{ teamA: Array<{ name: string }> }> };
+    expect(createPlayerResponse.status).toBe(201);
+
+    const playerLogin = await worker.fetch(
+      new Request("https://beachranker.test/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "dan.player@example.com", password: "change-me-too" })
+      }),
+      testEnv
+    );
+    const playerCookie = playerLogin.headers.get("set-cookie") ?? "";
+
+    const ownMatchesResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/matches", { headers: { cookie: playerCookie } }),
+      testEnv
+    );
+    const ownMatches = (await json(ownMatchesResponse)) as { matches: Array<{ teamA: Array<{ name: string }>; teamB: Array<{ name: string }> }> };
 
     expect(ownMatches.matches).toHaveLength(1);
-    expect(ownMatches.matches[0].teamA).toEqual([{ id: "admin-player", name: "Beach Admin", delta: 16 }, expect.objectContaining({ name: "Alice" })]);
+    expect(ownMatches.matches[0].teamB.map((player) => player.name)).toEqual(["Cara", "Dan"]);
 
     const danMatchesResponse = await worker.fetch(
-      new Request(`https://beachranker.test/api/matches?playerId=${players.Dan}`, { headers: { cookie } }),
+      new Request(`https://beachranker.test/api/matches?playerId=${players.Dan}`, { headers: { cookie: playerCookie } }),
       testEnv
     );
     const danMatches = (await json(danMatchesResponse)) as { matches: Array<{ teamB: Array<{ name: string }> }> };
@@ -276,5 +331,86 @@ describe("BeachRanker Worker API", () => {
       expect.objectContaining({ name: "Cara" }),
       expect.objectContaining({ name: "Dan" })
     ]);
+  });
+
+  it("lets admins without a linked player see all matches", async () => {
+    const adminLogin = await worker.fetch(
+      new Request("https://beachranker.test/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "admin@example.com", password: "change-me" })
+      }),
+      testEnv
+    );
+    const adminCookie = adminLogin.headers.get("set-cookie") ?? "";
+
+    const createAdminResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/users", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: adminCookie },
+        body: JSON.stringify({
+          email: "vetlewh@example.com",
+          displayName: "Vetle Harnes",
+          password: "change-me-too",
+          role: "ADMIN"
+        })
+      }),
+      testEnv
+    );
+    expect(createAdminResponse.status).toBe(201);
+
+    for (const name of ["Alice", "Bob", "Cara", "Dan"]) {
+      await worker.fetch(
+        new Request("https://beachranker.test/api/players", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: adminCookie },
+          body: JSON.stringify({ name, gender: "MEN" })
+        }),
+        testEnv
+      );
+    }
+
+    const playersResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/players", { headers: { cookie: adminCookie } }),
+      testEnv
+    );
+    const playersPayload = (await json(playersResponse)) as { players: Array<{ id: string; name: string }> };
+    const players = Object.fromEntries(playersPayload.players.map((player) => [player.name, player.id]));
+
+    await worker.fetch(
+      new Request("https://beachranker.test/api/matches", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: adminCookie },
+        body: JSON.stringify({
+          playedAt: "2026-07-03T12:00:00.000Z",
+          teamAPlayerIds: [players.Alice, players.Bob],
+          teamBPlayerIds: [players.Cara, players.Dan],
+          sets: [
+            { teamAPoints: 21, teamBPoints: 19 },
+            { teamAPoints: 21, teamBPoints: 18 }
+          ]
+        })
+      }),
+      testEnv
+    );
+
+    const vetleLogin = await worker.fetch(
+      new Request("https://beachranker.test/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "vetlewh@example.com", password: "change-me-too" })
+      }),
+      testEnv
+    );
+    const vetleCookie = vetleLogin.headers.get("set-cookie") ?? "";
+
+    const matchesResponse = await worker.fetch(
+      new Request("https://beachranker.test/api/matches", { headers: { cookie: vetleCookie } }),
+      testEnv
+    );
+    const matchesPayload = (await json(matchesResponse)) as { matches: Array<{ teamA: Array<{ name: string }> }> };
+
+    expect(matchesPayload.matches).toHaveLength(1);
+    expect(matchesPayload.matches[0].teamA.map((player) => player.name)).toEqual(["Alice", "Bob"]);
   });
 });
