@@ -75,6 +75,19 @@ CREATE INDEX IF NOT EXISTS matches_team_a_player2_idx ON matches(teamAPlayer2Id)
 CREATE INDEX IF NOT EXISTS matches_team_b_player1_idx ON matches(teamBPlayer1Id);
 CREATE INDEX IF NOT EXISTS matches_team_b_player2_idx ON matches(teamBPlayer2Id);
 
+CREATE TABLE IF NOT EXISTS audit_log (
+  id TEXT PRIMARY KEY,
+  actorUserId TEXT NOT NULL,
+  action TEXT NOT NULL,
+  entityType TEXT NOT NULL,
+  entityId TEXT NOT NULL,
+  details TEXT,
+  createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (actorUserId) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS audit_log_created_idx ON audit_log(createdAt DESC);
+
 CREATE TABLE IF NOT EXISTS rating_recalc_lock (
   id TEXT PRIMARY KEY,
   owner TEXT NOT NULL,

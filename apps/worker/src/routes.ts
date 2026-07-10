@@ -123,22 +123,26 @@ async function players({ request, env }: RouteContext) {
 }
 
 async function addPlayer({ request, env }: RouteContext) {
-  requireAdmin(await getAuthUser(request, env));
+  const user = requireAdmin(await getAuthUser(request, env));
   const input = parsePlayer(await readJson(request));
-  return json({ player: await createPlayer(env.DB, input) }, { status: 201 });
+  const player = await createPlayer(env.DB, input);
+  await addAuditLog(env.DB, { actorUserId: user.id, action: "CREATE", entityType: "PLAYER", entityId: player.id });
+  return json({ player }, { status: 201 });
 }
 
 async function editPlayer({ request, env, params }: RouteContext) {
-  requireAdmin(await getAuthUser(request, env));
-  const player = await updatePlayer(env.DB, requireString(params.id, "id"), parsePlayerPatch(await readJson(request)));
+  const user = requireAdmin(await getAuthUser(request, env));
+  const playerId = requireString(params.id, "id");
+  const player = await updatePlayer(env.DB, playerId, parsePlayerPatch(await readJson(request)));
   if (!player) {
     throw new ApiError(404, "Player not found");
   }
+  await addAuditLog(env.DB, { actorUserId: user.id, action: "UPDATE", entityType: "PLAYER", entityId: playerId });
   return json({ player });
 }
 
 async function addUser({ request, env }: RouteContext) {
-  requireAdmin(await getAuthUser(request, env));
+  const admin = requireAdmin(await getAuthUser(request, env));
   const input = parseUserCreate(await readJson(request));
   const user = await createUser(env.DB, {
     email: input.email,
@@ -147,16 +151,19 @@ async function addUser({ request, env }: RouteContext) {
     role: input.role,
     playerId: input.playerId,
   });
+  await addAuditLog(env.DB, { actorUserId: admin.id, action: "CREATE", entityType: "USER", entityId: user.id });
   return json({ user }, { status: 201 });
 }
 
 async function resetPassword({ request, env, params }: RouteContext) {
-  requireAdmin(await getAuthUser(request, env));
+  const admin = requireAdmin(await getAuthUser(request, env));
   const input = parsePasswordReset(await readJson(request));
-  const user = await updateUserPassword(env.DB, requireString(params.id, "id"), await hashPassword(input.password));
+  const userId = requireString(params.id, "id");
+  const user = await updateUserPassword(env.DB, userId, await hashPassword(input.password));
   if (!user) {
     throw new ApiError(404, "User not found");
   }
+  await addAuditLog(env.DB, { actorUserId: admin.id, action: "RESET_PASSWORD", entityType: "USER", entityId: userId });
   return json({
     user: {
       id: user.id,

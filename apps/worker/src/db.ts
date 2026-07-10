@@ -220,17 +220,10 @@ export async function addAuditLog(
   db: D1Database,
   input: { actorUserId: string; action: string; entityType: string; entityId: string },
 ) {
-  try {
-    await db
-      .prepare("INSERT INTO audit_log (id, actorUserId, action, entityType, entityId) VALUES (?, ?, ?, ?, ?)")
-      .bind(createId(), input.actorUserId, input.action, input.entityType, input.entityId)
-      .run();
-  } catch (error) {
-    // Keep match writes compatible while an environment is being migrated.
-    if (!(error instanceof Error) || !error.message.includes("audit_log")) {
-      throw error;
-    }
-  }
+  await db
+    .prepare("INSERT INTO audit_log (id, actorUserId, action, entityType, entityId) VALUES (?, ?, ?, ?, ?)")
+    .bind(createId(), input.actorUserId, input.action, input.entityType, input.entityId)
+    .run();
 }
 
 export async function listAuditLog(db: D1Database) {
