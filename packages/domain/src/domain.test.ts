@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { calculateEloUpdate } from "./elo.js";
-import { deriveWinnerFromSets, findTiedSetNumber, formatScore, hasUniquePlayers, validateMatchSets } from "./matchRules.js";
+import {
+  deriveWinnerFromSets,
+  findTiedSetNumber,
+  formatScore,
+  hasUniquePlayers,
+  validateMatchSets,
+} from "./matchRules.js";
 
 describe("domain rules", () => {
   it("calculates Elo updates for a normal match", () => {
@@ -41,12 +47,14 @@ describe("domain rules", () => {
 
   it("accepts flexible match lengths while requiring decisive set scores", () => {
     expect(validateMatchSets([{ teamAPoints: 21, teamBPoints: 19 }])).toBeNull();
-    expect(validateMatchSets([
-      { teamAPoints: 21, teamBPoints: 19 },
-      { teamAPoints: 18, teamBPoints: 21 },
-      { teamAPoints: 15, teamBPoints: 13 },
-      { teamAPoints: 21, teamBPoints: 17 },
-    ])).toBeNull();
+    expect(
+      validateMatchSets([
+        { teamAPoints: 21, teamBPoints: 19 },
+        { teamAPoints: 18, teamBPoints: 21 },
+        { teamAPoints: 15, teamBPoints: 13 },
+        { teamAPoints: 21, teamBPoints: 17 },
+      ]),
+    ).toBeNull();
     expect(validateMatchSets([{ teamAPoints: 21, teamBPoints: 20 }])).not.toBeNull();
   });
 });

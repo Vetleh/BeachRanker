@@ -516,7 +516,9 @@ function MatchesView({
           </select>
         </label>
       </div>
-      {visibleMatches.length === 0 && <p className="empty-state">{matches.length === 0 ? t("matches.empty") : t("filters.noMatches")}</p>}
+      {visibleMatches.length === 0 && (
+        <p className="empty-state">{matches.length === 0 ? t("matches.empty") : t("filters.noMatches")}</p>
+      )}
       {visibleMatches.map((match) => (
         <article className="match-card" key={match.id}>
           <div className="match-meta">
@@ -682,8 +684,10 @@ function MatchForm({
       if (match.id === editingMatch?.id || match.playedAt.slice(0, 10) !== playedAt) {
         return false;
       }
-      return new Set([...match.teamA, ...match.teamB].map((player) => player.id)).size === 4 &&
-        [...match.teamA, ...match.teamB].every((player) => selected.has(player.id));
+      return (
+        new Set([...match.teamA, ...match.teamB].map((player) => player.id)).size === 4 &&
+        [...match.teamA, ...match.teamB].every((player) => selected.has(player.id))
+      );
     });
   }, [editingMatch?.id, existingMatches, playedAt, selectedPlayerIds]);
 
