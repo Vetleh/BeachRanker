@@ -56,6 +56,23 @@
     "backToRankings": "Rankings",
     "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
   },
+  "filters": {
+    "searchPlayers": "Search players",
+    "searchMatches": "Search matches",
+    "sortBy": "Sort by",
+    "rank": "Rank",
+    "rating": "Rating",
+    "wins": "Wins",
+    "played": "Matches played",
+    "from": "From",
+    "to": "To",
+    "ratingStatus": "Rating status",
+    "all": "All",
+    "rated": "Rated",
+    "unrated": "Unrated",
+    "noPlayers": "No players match your search.",
+    "noMatches": "No matches match your filters."
+  },
   "matchForm": {
     "addTitle": "Add Match",
     "correctTitle": "Correct Match",

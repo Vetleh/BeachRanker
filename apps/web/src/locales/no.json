@@ -56,6 +56,23 @@
     "backToRankings": "Rangering",
     "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
   },
+  "filters": {
+    "searchPlayers": "Søk etter spillere",
+    "searchMatches": "Søk i kamper",
+    "sortBy": "Sorter etter",
+    "rank": "Plassering",
+    "rating": "Rating",
+    "wins": "Seire",
+    "played": "Spilte kamper",
+    "from": "Fra",
+    "to": "Til",
+    "ratingStatus": "Ratingstatus",
+    "all": "Alle",
+    "rated": "Rangerte",
+    "unrated": "Urangerte",
+    "noPlayers": "Ingen spillere passer søket.",
+    "noMatches": "Ingen kamper passer filtrene."
+  },
   "matchForm": {
     "addTitle": "Legg til kamp",
     "correctTitle": "Korriger kamp",

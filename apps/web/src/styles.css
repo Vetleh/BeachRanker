@@ -236,6 +236,17 @@ button:disabled {
   margin-bottom: 8px;
 }
 
+.filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px);
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.match-filters {
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(130px, 180px));
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -558,6 +569,11 @@ select {
   .app-shell {
     width: min(100% - 20px, 1180px);
     padding-top: 10px;
+  }
+
+  .filter-bar,
+  .match-filters {
+    grid-template-columns: 1fr;
   }
 
   .topbar,

@@ -354,6 +354,20 @@ function RankingTable({
   onViewPlayer: (player: Ranking) => void;
   t: Translator;
 }) {
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"rank" | "rating" | "wins" | "played">("rank");
+  const visibleRankings = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    return rankings
+      .filter((player) => player.name.toLowerCase().includes(normalizedSearch))
+      .sort((left, right) => {
+        if (sortBy === "rating") return right.rating - left.rating || left.name.localeCompare(right.name);
+        if (sortBy === "wins") return right.wins - left.wins || right.rating - left.rating;
+        if (sortBy === "played") return right.matchesPlayed - left.matchesPlayed || right.rating - left.rating;
+        return left.rank - right.rank;
+      });
+  }, [rankings, search, sortBy]);
+
   return (
     <section className="surface">
       <div className="section-heading">
@@ -382,6 +396,21 @@ function RankingTable({
           </button>
         </div>
       </div>
+      <div className="filter-bar">
+        <label>
+          {t("filters.searchPlayers")}
+          <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" />
+        </label>
+        <label>
+          {t("filters.sortBy")}
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+            <option value="rank">{t("filters.rank")}</option>
+            <option value="rating">{t("filters.rating")}</option>
+            <option value="wins">{t("filters.wins")}</option>
+            <option value="played">{t("filters.played")}</option>
+          </select>
+        </label>
+      </div>
       <div className="table-wrap">
         <table>
           <thead>
@@ -395,7 +424,7 @@ function RankingTable({
             </tr>
           </thead>
           <tbody>
-            {rankings.map((player) => (
+            {visibleRankings.map((player) => (
               <tr key={player.id}>
                 <td className="rank-cell">#{player.rank}</td>
                 <td>
@@ -417,6 +446,7 @@ function RankingTable({
           </tbody>
         </table>
       </div>
+      {visibleRankings.length === 0 && <p className="empty-state">{t("filters.noPlayers")}</p>}
     </section>
   );
 }
@@ -439,6 +469,22 @@ function MatchesView({
   onDelete: (matchId: string) => Promise<void>;
 }) {
   const [busyMatchId, setBusyMatchId] = useState("");
+  const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [ratingFilter, setRatingFilter] = useState<"all" | "rated" | "unrated">("all");
+  const visibleMatches = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    return matches.filter((match) => {
+      const matchDate = match.playedAt.slice(0, 10);
+      const players = [...match.teamA, ...match.teamB].map((player) => player.name.toLowerCase());
+      const matchesSearch = !normalizedSearch || players.some((name) => name.includes(normalizedSearch));
+      const matchesFrom = !fromDate || matchDate >= fromDate;
+      const matchesTo = !toDate || matchDate <= toDate;
+      const matchesRating = ratingFilter === "all" || (ratingFilter === "rated" ? match.rated : !match.rated);
+      return matchesSearch && matchesFrom && matchesTo && matchesRating;
+    });
+  }, [fromDate, matches, ratingFilter, search, toDate]);
 
   return (
     <section className="match-list">
@@ -448,8 +494,30 @@ function MatchesView({
           <p>{subtitle ?? t("matches.historySubtitle", { count: matches.length })}</p>
         </div>
       </div>
-      {matches.length === 0 && <p className="empty-state">{t("matches.empty")}</p>}
-      {matches.map((match) => (
+      <div className="filter-bar match-filters">
+        <label>
+          {t("filters.searchMatches")}
+          <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" />
+        </label>
+        <label>
+          {t("filters.from")}
+          <input value={fromDate} onChange={(event) => setFromDate(event.target.value)} type="date" />
+        </label>
+        <label>
+          {t("filters.to")}
+          <input value={toDate} onChange={(event) => setToDate(event.target.value)} type="date" />
+        </label>
+        <label>
+          {t("filters.ratingStatus")}
+          <select value={ratingFilter} onChange={(event) => setRatingFilter(event.target.value as typeof ratingFilter)}>
+            <option value="all">{t("filters.all")}</option>
+            <option value="rated">{t("filters.rated")}</option>
+            <option value="unrated">{t("filters.unrated")}</option>
+          </select>
+        </label>
+      </div>
+      {visibleMatches.length === 0 && <p className="empty-state">{matches.length === 0 ? t("matches.empty") : t("filters.noMatches")}</p>}
+      {visibleMatches.map((match) => (
         <article className="match-card" key={match.id}>
           <div className="match-meta">
             <span>{new Date(match.playedAt).toLocaleDateString()}</span>
