@@ -9,6 +9,7 @@ export type AppRoute =
   | { name: "newMatch"; path: "/matches/new" }
   | { name: "editMatch"; path: string; matchId: string }
   | { name: "player"; path: string; playerId: string }
+  | { name: "account"; path: "/account" }
   | { name: "admin"; path: "/admin" }
   | { name: "notFound"; path: string };
 
@@ -62,6 +63,9 @@ export function parseRoute(pathname: string): AppRoute {
   }
   if (path === "/matches/new") {
     return { name: "newMatch", path: "/matches/new" };
+  }
+  if (path === "/account") {
+    return { name: "account", path: "/account" };
   }
   if (path === "/admin") {
     return { name: "admin", path: "/admin" };

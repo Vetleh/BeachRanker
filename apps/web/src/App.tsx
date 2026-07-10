@@ -100,16 +100,10 @@ export function App() {
           <div className="brand-mark">
             <Volleyball size={24} />
           </div>
-          <div>
-            <h1>BeachRanker</h1>
-            <p>{t("app.tagline")}</p>
-          </div>
         </div>
         <div className="session">
-          <LanguageSelect language={language} onChange={changeLanguage} t={t} />
-          <span>{user.displayName}</span>
-          <button className="icon-button" type="button" onClick={handleLogout} aria-label={t("auth.logout")}>
-            <LogOut size={18} />
+          <button className="icon-button" type="button" onClick={() => navigate("/account")} aria-label={t("account.title")}>
+            <UserRound size={18} />
           </button>
         </div>
       </header>
@@ -181,6 +175,9 @@ export function App() {
               <p className="empty-state">{rankings.length === 0 ? t("matches.loading") : t("errors.loadProfile")}</p>
             </section>
           ))}
+        {route.name === "account" && (
+          <AccountView user={user} language={language} onLanguageChange={changeLanguage} onLogout={handleLogout} t={t} />
+        )}
         {(route.name === "newMatch" || route.name === "editMatch") &&
           (route.name === "editMatch" && !editingMatch ? (
             <section className="surface">
@@ -236,8 +233,8 @@ function LanguageSelect({
 }) {
   return (
     <label className="language-select">
-      <span>{t("app.language")}</span>
-      <select value={language} onChange={(event) => onChange(event.target.value as Language)}>
+      <span className="visually-hidden">{t("app.language")}</span>
+      <select value={language} onChange={(event) => onChange(event.target.value as Language)} aria-label={t("app.language")}>
         <option value="no">{t("app.norwegian")}</option>
         <option value="en">{t("app.english")}</option>
       </select>
@@ -245,7 +242,76 @@ function LanguageSelect({
   );
 }
 
+function LanguageFlagSelect({
+  language,
+  onChange,
+  t,
+}: {
+  language: Language;
+  onChange: (language: Language) => void;
+  t: Translator;
+}) {
+  return (
+    <label className="language-flag-select">
+      <span className="visually-hidden">{t("app.language")}</span>
+      <select
+        value={language}
+        onChange={(event) => onChange(event.target.value as Language)}
+        aria-label={t("app.language")}
+      >
+        <option value="no" aria-label={t("app.norwegian")}>
+          🇳🇴
+        </option>
+        <option value="en" aria-label={t("app.english")}>
+          🇬🇧
+        </option>
+      </select>
+    </label>
+  );
+}
+
 type Translator = (path: TranslationPath, values?: Record<string, string | number>) => string;
+
+function AccountView({
+  user,
+  language,
+  onLanguageChange,
+  onLogout,
+  t,
+}: {
+  user: User;
+  language: Language;
+  onLanguageChange: (language: Language) => void;
+  onLogout: () => Promise<void>;
+  t: Translator;
+}) {
+  return (
+    <section className="account-layout">
+      <div className="surface account-card">
+        <div className="profile-title">
+          <div className="brand-mark">
+            <UserRound size={22} />
+          </div>
+          <div>
+            <p className="eyebrow">{t("account.title")}</p>
+            <h2>{user.displayName}</h2>
+            <p>{user.email}</p>
+          </div>
+        </div>
+      </div>
+      <section className="surface account-card">
+        <h2>{t("account.preferences")}</h2>
+        <LanguageSelect language={language} onChange={onLanguageChange} t={t} />
+      </section>
+      <section className="surface account-card">
+        <button className="secondary-button" type="button" onClick={() => void onLogout()}>
+          <LogOut size={18} />
+          {t("auth.logout")}
+        </button>
+      </section>
+    </section>
+  );
+}
 
 function LoginScreen({
   language,
@@ -280,7 +346,7 @@ function LoginScreen({
         <div className="brand-mark large">
           <Volleyball size={36} />
         </div>
-        <LanguageSelect language={language} onChange={onLanguageChange} t={t} />
+        <LanguageFlagSelect language={language} onChange={onLanguageChange} t={t} />
         <h1>BeachRanker</h1>
         <form onSubmit={submit} className="form-stack">
           <label>
@@ -450,6 +516,28 @@ function RankingTable({
           </tbody>
         </table>
       </div>
+      <div className="ranking-mobile-list" aria-label={title}>
+        {visibleRankings.map((player) => (
+          <article className="ranking-mobile-card" key={player.id}>
+            <span className="ranking-mobile-rank">#{player.rank}</span>
+            <button className="link-button ranking-mobile-player" type="button" onClick={() => onViewPlayer(player)}>
+              {player.name}
+            </button>
+            <span className="ranking-mobile-rating">
+              <span>{t("rankings.elo")}</span>
+              <strong>{player.rating}</strong>
+            </span>
+            <div className="ranking-mobile-meta">
+              <span>
+                {t("rankings.record")} <strong>{player.wins}-{player.losses}</strong>
+              </span>
+              <span>
+                {t("rankings.last")} <strong className={player.recentDelta >= 0 ? "positive" : "negative"}>{player.recentDelta > 0 ? "+" : ""}{player.recentDelta}</strong>
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
       {visibleRankings.length === 0 && <p className="empty-state">{t("filters.noPlayers")}</p>}
     </section>
   );
@@ -495,7 +583,7 @@ function MatchesView({
   }, [fromDate, matches, ratingFilter, search, toDate]);
 
   return (
-    <section className="match-list">
+    <section className="surface match-list">
       <div className="section-heading">
         <div>
           <h2>{title ?? t("matches.historyTitle")}</h2>
@@ -515,9 +603,13 @@ function MatchesView({
           {t("filters.to")}
           <input value={toDate} onChange={(event) => setToDate(event.target.value)} type="date" />
         </label>
-        <label>
-          {t("filters.ratingStatus")}
-          <select value={ratingFilter} onChange={(event) => setRatingFilter(event.target.value as typeof ratingFilter)}>
+        <label className="rating-filter">
+          <span className="visually-hidden">{t("filters.ratingStatus")}</span>
+          <select
+            value={ratingFilter}
+            onChange={(event) => setRatingFilter(event.target.value as typeof ratingFilter)}
+            aria-label={t("filters.ratingStatus")}
+          >
             <option value="all">{t("filters.all")}</option>
             <option value="rated">{t("filters.rated")}</option>
             <option value="unrated">{t("filters.unrated")}</option>
@@ -870,10 +962,14 @@ function MatchForm({
           </div>
         </div>
         {duplicateMatch && <p className="form-warning">{t("matchForm.duplicateWarning")}</p>}
-        <label className="checkbox-field">
-          <input type="checkbox" checked={isRanked} onChange={(event) => setIsRanked(event.target.checked)} />
-          <span>{t("matchForm.countForRanking")}</span>
-        </label>
+        <div className="ranking-toggle" role="group" aria-label={t("matchForm.countForRanking")}>
+          <button className={isRanked ? "active" : ""} type="button" aria-pressed={isRanked} onClick={() => setIsRanked(true)}>
+            {t("matchForm.ranked")}
+          </button>
+          <button className={!isRanked ? "active" : ""} type="button" aria-pressed={!isRanked} onClick={() => setIsRanked(false)}>
+            {t("matchForm.unranked")}
+          </button>
+        </div>
         {error && <p className="form-error">{error}</p>}
         {success && <p className="form-success">{success}</p>}
         <div className="form-actions">

@@ -9,6 +9,7 @@ describe("router", () => {
     expect(parseRoute("/rankings/women")).toEqual({ name: "rankings", path: "/rankings/women", gender: "WOMEN" });
     expect(parseRoute("/matches")).toEqual({ name: "matches", path: "/matches" });
     expect(parseRoute("/matches/new")).toEqual({ name: "newMatch", path: "/matches/new" });
+    expect(parseRoute("/account")).toEqual({ name: "account", path: "/account" });
     expect(parseRoute("/admin")).toEqual({ name: "admin", path: "/admin" });
   });
 

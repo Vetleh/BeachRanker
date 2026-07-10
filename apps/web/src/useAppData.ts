@@ -44,12 +44,14 @@ export function useAppData(onError: (message: string) => void) {
       })
       .catch((err: Error) => {
         if (current) {
+          if (err.message === "Authentication required" || err.message === "Invalid token") {
+            setUser(null);
+            return;
+          }
+
           // A data request can fail after authentication succeeds. Keep the
           // session intact so a transient API/database error does not log out
           // the user.
-          if (err.message === "Authentication required" || err.message === "Invalid token") {
-            setUser(null);
-          }
           onError(err.message);
         }
       })

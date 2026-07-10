@@ -58,6 +58,10 @@
     "backToRankings": "Rankings",
     "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
   },
+  "account": {
+    "title": "Profile",
+    "preferences": "Preferences"
+  },
   "filters": {
     "searchPlayers": "Search players",
     "searchMatches": "Search matches",
@@ -98,6 +102,8 @@
     "saved": "Match saved. Ready for another match.",
     "duplicateWarning": "A match with these four players already exists on this date.",
     "countForRanking": "Count this match toward the rankings",
+    "ranked": "Ranked",
+    "unranked": "Unranked",
     "selectFourUnique": "Select four unique players.",
     "scoresNeedWinner": "Set scores must produce a winner.",
     "invalidScores": "Enter valid scores: every completed set needs a winner with at least a two-point margin.",
