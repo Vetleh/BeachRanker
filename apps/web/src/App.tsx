@@ -102,7 +102,12 @@ export function App() {
           </div>
         </div>
         <div className="session">
-          <button className="icon-button" type="button" onClick={() => navigate("/account")} aria-label={t("account.title")}>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={() => navigate("/account")}
+            aria-label={t("account.title")}
+          >
             <UserRound size={18} />
           </button>
         </div>
@@ -176,7 +181,13 @@ export function App() {
             </section>
           ))}
         {route.name === "account" && (
-          <AccountView user={user} language={language} onLanguageChange={changeLanguage} onLogout={handleLogout} t={t} />
+          <AccountView
+            user={user}
+            language={language}
+            onLanguageChange={changeLanguage}
+            onLogout={handleLogout}
+            t={t}
+          />
         )}
         {(route.name === "newMatch" || route.name === "editMatch") &&
           (route.name === "editMatch" && !editingMatch ? (
@@ -234,7 +245,11 @@ function LanguageSelect({
   return (
     <label className="language-select">
       <span className="visually-hidden">{t("app.language")}</span>
-      <select value={language} onChange={(event) => onChange(event.target.value as Language)} aria-label={t("app.language")}>
+      <select
+        value={language}
+        onChange={(event) => onChange(event.target.value as Language)}
+        aria-label={t("app.language")}
+      >
         <option value="no">{t("app.norwegian")}</option>
         <option value="en">{t("app.english")}</option>
       </select>
@@ -529,10 +544,17 @@ function RankingTable({
             </span>
             <div className="ranking-mobile-meta">
               <span>
-                {t("rankings.record")} <strong>{player.wins}-{player.losses}</strong>
+                {t("rankings.record")}{" "}
+                <strong>
+                  {player.wins}-{player.losses}
+                </strong>
               </span>
               <span>
-                {t("rankings.last")} <strong className={player.recentDelta >= 0 ? "positive" : "negative"}>{player.recentDelta > 0 ? "+" : ""}{player.recentDelta}</strong>
+                {t("rankings.last")}{" "}
+                <strong className={player.recentDelta >= 0 ? "positive" : "negative"}>
+                  {player.recentDelta > 0 ? "+" : ""}
+                  {player.recentDelta}
+                </strong>
               </span>
             </div>
           </article>
@@ -963,10 +985,20 @@ function MatchForm({
         </div>
         {duplicateMatch && <p className="form-warning">{t("matchForm.duplicateWarning")}</p>}
         <div className="ranking-toggle" role="group" aria-label={t("matchForm.countForRanking")}>
-          <button className={isRanked ? "active" : ""} type="button" aria-pressed={isRanked} onClick={() => setIsRanked(true)}>
+          <button
+            className={isRanked ? "active" : ""}
+            type="button"
+            aria-pressed={isRanked}
+            onClick={() => setIsRanked(true)}
+          >
             {t("matchForm.ranked")}
           </button>
-          <button className={!isRanked ? "active" : ""} type="button" aria-pressed={!isRanked} onClick={() => setIsRanked(false)}>
+          <button
+            className={!isRanked ? "active" : ""}
+            type="button"
+            aria-pressed={!isRanked}
+            onClick={() => setIsRanked(false)}
+          >
             {t("matchForm.unranked")}
           </button>
         </div>
