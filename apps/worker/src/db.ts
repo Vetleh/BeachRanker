@@ -306,7 +306,7 @@ export async function listMatches(db: D1Database, playerId?: string, page?: { li
       JOIN players p4 ON p4.id = m.teamBPlayer2Id
       JOIN users u ON u.id = m.enteredByUserId
       ${playerFilter}
-      ORDER BY m.playedAt DESC, m.createdAt DESC${pagination}`,
+      ORDER BY m.playedAt DESC, m.createdAt DESC, m.id DESC${pagination}`,
   );
   const bindValues = page
     ? playerId
