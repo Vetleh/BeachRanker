@@ -11,6 +11,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -607,6 +608,7 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
     () => editingMatch?.teamB.map((player) => player.id) ?? ["", ""],
   );
   const [sets, setSets] = useState<EditableMatchSet[]>(() => editingMatch?.sets ?? emptySets);
+  const [isRanked, setIsRanked] = useState(() => editingMatch?.isRanked ?? true);
   const [busy, setBusy] = useState(false);
   const activePlayers = players.filter((player) => player.active);
   const numericSets = useMemo(() => normalizeSets(sets), [sets]);
@@ -640,6 +642,7 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
       teamBPlayerIds,
       sets: numericSets,
       isTiebreak: sets.length >= 3,
+      isRanked,
     };
     setBusy(true);
     try {
@@ -653,6 +656,7 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
         setTeamAPlayerIds(["", ""]);
         setTeamBPlayerIds(["", ""]);
         setSets(emptySets);
+        setIsRanked(true);
       }
       if (navigation.canGoBack()) {
         navigation.goBack();
@@ -713,6 +717,10 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
       {sets.length > 1 && (
         <SecondaryButton label={t("removeSet")} onPress={() => setSets((current) => current.slice(0, -1))} />
       )}
+      <Pressable style={styles.checkboxRow} onPress={() => setIsRanked((current) => !current)}>
+        <Switch value={isRanked} onValueChange={setIsRanked} />
+        <Text style={styles.checkboxLabel}>{t("countForRanking")}</Text>
+      </Pressable>
       <PrimaryButton
         label={busy ? t("saving") : editingMatch ? t("saveCorrection") : t("saveMatch")}
         disabled={busy}
@@ -1723,6 +1731,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  checkboxLabel: {
+    color: colors.ink,
+    flex: 1,
   },
   scoreInput: {
     width: 72,
