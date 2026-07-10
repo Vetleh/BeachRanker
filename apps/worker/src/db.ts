@@ -138,11 +138,11 @@ export async function updatePlayer(db: D1Database, playerId: string, input: { na
 
 export async function updateUserPassword(db: D1Database, userId: string, passwordHash: string) {
   await db
-    .prepare("UPDATE users SET passwordHash = ?, updatedAt = ? WHERE id = ?")
+    .prepare("UPDATE users SET passwordHash = ?, sessionVersion = sessionVersion + 1, updatedAt = ? WHERE id = ?")
     .bind(passwordHash, nowIso(), userId)
     .run();
   return db
-    .prepare("SELECT id, email, displayName, passwordHash, role, active FROM users WHERE id = ?")
+    .prepare("SELECT id, email, displayName, passwordHash, role, active, sessionVersion FROM users WHERE id = ?")
     .bind(userId)
     .first<User>();
 }

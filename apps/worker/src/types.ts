@@ -9,6 +9,7 @@ export type User = {
   passwordHash: string;
   role: Role;
   active: number;
+  sessionVersion: number;
 };
 
 export type AuthUser = Pick<User, "id" | "email" | "displayName" | "role"> & {

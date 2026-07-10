@@ -10,6 +10,7 @@ const tokenMaxAgeSeconds = 60 * 60 * 24 * 30;
 type TokenPayload = {
   sub: string;
   exp: number;
+  ver: number;
 };
 
 export async function hashPassword(password: string) {
@@ -26,9 +27,14 @@ export async function createSessionCookie(env: Env, userId: string) {
 }
 
 export async function createSessionToken(env: Env, userId: string) {
+  const user = await env.DB.prepare("SELECT sessionVersion FROM users WHERE id = ?").bind(userId).first<{ sessionVersion: number }>();
+  if (!user) {
+    throw new ApiError(401, "Authentication required");
+  }
   const payload: TokenPayload = {
     sub: userId,
     exp: Math.floor(Date.now() / 1000) + tokenMaxAgeSeconds,
+    ver: user.sessionVersion,
   };
   return signToken(env.JWT_SECRET, payload);
 }
@@ -48,11 +54,13 @@ export async function getAuthUser(request: Request, env: Env): Promise<AuthUser 
     return null;
   }
 
-  const user = await env.DB.prepare("SELECT id, email, displayName, passwordHash, role, active FROM users WHERE id = ?")
+  const user = await env.DB.prepare(
+    "SELECT id, email, displayName, passwordHash, role, active, sessionVersion FROM users WHERE id = ?",
+  )
     .bind(payload.sub)
     .first<User>();
 
-  if (!user || user.active !== 1) {
+  if (!user || user.active !== 1 || payload.ver !== user.sessionVersion) {
     return null;
   }
 
@@ -99,6 +107,9 @@ async function verifyToken(secret: string, token: string): Promise<TokenPayload>
   }
 
   const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(body))) as TokenPayload;
+  if (!Number.isInteger(payload.exp) || !Number.isInteger(payload.ver) || typeof payload.sub !== "string") {
+    throw new ApiError(401, "Invalid token");
+  }
   if (payload.exp < Math.floor(Date.now() / 1000)) {
     throw new ApiError(401, "Expired token");
   }

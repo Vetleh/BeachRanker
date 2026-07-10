@@ -103,7 +103,11 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
   if (insertMatch) {
     const table = getTable(tables, insertMatch[1]);
     const columns = insertMatch[2].split(",").map((column) => column.trim());
-    table.push(Object.fromEntries(columns.map((column, index) => [column, values[index]])));
+    const row = Object.fromEntries(columns.map((column, index) => [column, values[index]]));
+    if (insertMatch[1] === "users" && row.sessionVersion === undefined) {
+      row.sessionVersion = 0;
+    }
+    table.push(row);
     return;
   }
 
