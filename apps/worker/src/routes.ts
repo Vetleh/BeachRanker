@@ -67,7 +67,7 @@ const routes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
 ];
 
 async function health({ env }: RouteContext) {
-  await env.DB.prepare("SELECT id, name, active, initialRating, gender, userId FROM players ORDER BY name ASC").all();
+  await env.DB.prepare("SELECT 1").first();
   return json({ status: "ok" });
 }
 

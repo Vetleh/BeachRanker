@@ -236,6 +236,9 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
 }
 
 function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[]) {
+  if (/^SELECT 1$/i.test(sql.trim())) {
+    return [{ "1": 1 }];
+  }
   if (/FROM users WHERE email = \?/i.test(sql)) {
     return getTable(tables, "users").filter((row) => row.email === values[0]);
   }
