@@ -122,6 +122,26 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
+  const deleteRatingLock = sql.match(/^DELETE FROM rating_recalc_lock WHERE id = \? AND expiresAt <= \?/i);
+  if (deleteRatingLock) {
+    tables.set(
+      "rating_recalc_lock",
+      getTable(tables, "rating_recalc_lock").filter(
+        (row) => row.id !== values[0] || Number(row.expiresAt) > Number(values[1]),
+      ),
+    );
+    return;
+  }
+
+  const releaseRatingLock = sql.match(/^DELETE FROM rating_recalc_lock WHERE id = \? AND owner = \?/i);
+  if (releaseRatingLock) {
+    tables.set(
+      "rating_recalc_lock",
+      getTable(tables, "rating_recalc_lock").filter((row) => row.id !== values[0] || row.owner !== values[1]),
+    );
+    return;
+  }
+
   const deleteMatch = sql.match(/^DELETE FROM matches WHERE id = \?/i);
   if (deleteMatch) {
     tables.set(
@@ -180,6 +200,9 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   }
   if (/FROM players WHERE userId = \?/i.test(sql)) {
     return getTable(tables, "players").filter((row) => row.userId === values[0]);
+  }
+  if (/FROM rating_recalc_lock WHERE id = \?/i.test(sql)) {
+    return getTable(tables, "rating_recalc_lock").filter((row) => row.id === values[0]);
   }
   if (/COUNT\(\*\) as count FROM players/i.test(sql)) {
     const ids = values;

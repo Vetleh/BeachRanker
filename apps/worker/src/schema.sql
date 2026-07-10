@@ -64,3 +64,10 @@ CREATE TABLE IF NOT EXISTS rating_snapshots (
   FOREIGN KEY (playerId) REFERENCES players(id) ON DELETE CASCADE,
   UNIQUE (matchId, playerId)
 );
+
+CREATE TABLE IF NOT EXISTS rating_recalc_lock (
+  id TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  acquiredAt INTEGER NOT NULL,
+  expiresAt INTEGER NOT NULL
+);
