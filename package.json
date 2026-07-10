@@ -14,7 +14,7 @@
     "dev:web": "npm run build -w packages/domain && npm run build -w packages/api-client && concurrently \"npm run dev -w apps/worker\" \"npm run dev -w apps/web\"",
     "dev:worker": "npm run build -w packages/domain && npm run build -w packages/api-client && npm run build -w apps/web && wrangler dev",
     "build": "npm run build -w packages/domain && npm run build -w packages/api-client && npm run build -w apps/worker && npm run build -w apps/web",
-    "test": "npm run build -w packages/domain && npm run build -w packages/api-client && npm run test -w packages/domain && npm run test -w apps/worker && npm run test -w apps/web",
+    "test": "npm run build -w packages/domain && npm run build -w packages/api-client && npm run test -w packages/domain && npm run test -w apps/worker && npm run test -w apps/web && npm run test -w apps/mobile",
     "typecheck": "npm run build -w packages/domain && npm run build -w packages/api-client && npm run typecheck -w apps/worker && npm run typecheck -w apps/web && npm run typecheck -w apps/mobile",
     "mobile:dev": "npm run build -w packages/api-client && npm exec -w @beach-ranker/mobile -- expo start --dev-client",
     "ios:dev-build": "npm run build -w packages/api-client && npm exec -w @beach-ranker/mobile -- eas build --platform ios --profile development",

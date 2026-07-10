@@ -119,6 +119,78 @@ export async function getRankings(db: D1Database) {
     }));
 }
 
+export async function getPlayerInsights(db: D1Database, playerId: string) {
+  const [players, matches, snapshots] = await Promise.all([listPlayers(db), listMatches(db), listSnapshots(db)]);
+  const player = players.find((candidate) => candidate.id === playerId);
+  if (!player) {
+    return null;
+  }
+
+  const snapshotsByMatch = new Map<string, RatingSnapshot[]>();
+  snapshots.forEach((snapshot) => {
+    const matchSnapshots = snapshotsByMatch.get(snapshot.matchId) ?? [];
+    matchSnapshots.push(snapshot);
+    snapshotsByMatch.set(snapshot.matchId, matchSnapshots);
+  });
+
+  const ratedMatches = matches
+    .filter((match) => isRatedMatch(match) && includesPlayer(match, playerId))
+    .sort((left, right) => left.playedAt.localeCompare(right.playedAt) || left.id.localeCompare(right.id));
+  const ratingHistory = ratedMatches.flatMap((match) => {
+    const snapshot = snapshotsByMatch.get(match.id)?.find((candidate) => candidate.playerId === playerId);
+    return snapshot
+      ? [{ matchId: match.id, playedAt: match.playedAt, rating: snapshot.postRating, delta: snapshot.delta }]
+      : [];
+  });
+  const headToHead = new Map<string, { playerId: string; playerName: string; wins: number; losses: number }>();
+
+  ratedMatches.forEach((match) => {
+    const targetOnTeamA = [match.teamAPlayer1Id, match.teamAPlayer2Id].includes(playerId);
+    const opponents = targetOnTeamA
+      ? [
+          { id: match.teamBPlayer1Id, name: match.teamBPlayer1Name },
+          { id: match.teamBPlayer2Id, name: match.teamBPlayer2Name },
+        ]
+      : [
+          { id: match.teamAPlayer1Id, name: match.teamAPlayer1Name },
+          { id: match.teamAPlayer2Id, name: match.teamAPlayer2Name },
+        ];
+    const won = (targetOnTeamA && match.winningTeam === "A") || (!targetOnTeamA && match.winningTeam === "B");
+
+    opponents.forEach((opponent) => {
+      const record = headToHead.get(opponent.id) ?? {
+        playerId: opponent.id,
+        playerName: opponent.name,
+        wins: 0,
+        losses: 0,
+      };
+      if (won) {
+        record.wins += 1;
+      } else {
+        record.losses += 1;
+      }
+      headToHead.set(opponent.id, record);
+    });
+  });
+
+  return {
+    summary: {
+      currentRating: ratingHistory.at(-1)?.rating ?? player.initialRating,
+      peakRating: Math.max(player.initialRating, ...ratingHistory.map((point) => point.rating)),
+      ratedMatches: ratingHistory.length,
+    },
+    ratingHistory,
+    headToHead: [...headToHead.values()]
+      .map((record) => ({ ...record, matchesPlayed: record.wins + record.losses }))
+      .sort(
+        (left, right) =>
+          right.matchesPlayed - left.matchesPlayed ||
+          right.wins - left.wins ||
+          left.playerName.localeCompare(right.playerName),
+      ),
+  };
+}
+
 export async function formatMatch(db: D1Database, match: MatchRow) {
   const [formatted] = await formatMatches(db, [match]);
   return formatted;
@@ -206,6 +278,10 @@ function isRatedMatch(match: MatchRow) {
     match.teamBPlayer2Gender ?? "MEN",
   ];
   return genders.every((gender) => gender === genders[0]);
+}
+
+function includesPlayer(match: MatchRow, playerId: string) {
+  return [match.teamAPlayer1Id, match.teamAPlayer2Id, match.teamBPlayer1Id, match.teamBPlayer2Id].includes(playerId);
 }
 
 type MatchSetRow = Required<Pick<MatchSet, "id" | "setNumber" | "teamAPoints" | "teamBPoints">> & {

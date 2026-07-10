@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { Match, Player, Ranking, User } from "./types";
+import type { Match, Player, PlayerInsights, Ranking, User } from "./types";
 
 export function useAppData(onError: (message: string) => void) {
   const [user, setUser] = useState<User | null>(null);
@@ -8,16 +8,25 @@ export function useAppData(onError: (message: string) => void) {
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchesHasMore, setMatchesHasMore] = useState(false);
+  const [loadingMoreMatches, setLoadingMoreMatches] = useState(false);
   const [profileMatches, setProfileMatches] = useState<Match[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileInsights, setProfileInsights] = useState<PlayerInsights | null>(null);
+  const [profileInsightsLoading, setProfileInsightsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const refreshData = useCallback(async () => {
+  const loadingMoreRef = useRef(false);
+
+  const refreshData = useCallback(async (signal?: AbortSignal) => {
     const [playersResult, rankingsResult, matchesResult] = await Promise.all([
-      api.players(),
-      api.rankings(),
-      api.matches(undefined, { limit: 200, offset: 0 }),
+      api.players({ signal }),
+      api.rankings({ signal }),
+      api.matches(undefined, { limit: 200, offset: 0 }, { signal }),
     ]);
+
+    if (signal?.aborted) {
+      return;
+    }
 
     setPlayers(playersResult.players);
     setRankings(rankingsResult.rankings);
@@ -26,43 +35,56 @@ export function useAppData(onError: (message: string) => void) {
   }, []);
 
   const loadMoreMatches = useCallback(async () => {
-    const result = await api.matches(undefined, { limit: 200, offset: matches.length });
-    setMatches((current) => [...current, ...result.matches]);
-    setMatchesHasMore(result.hasMore);
+    if (loadingMoreRef.current) {
+      return;
+    }
+
+    loadingMoreRef.current = true;
+    setLoadingMoreMatches(true);
+    try {
+      const result = await api.matches(undefined, { limit: 200, offset: matches.length });
+      setMatches((current) => mergeMatches(current, result.matches));
+      setMatchesHasMore(result.hasMore);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMoreMatches(false);
+    }
   }, [matches.length]);
 
   useEffect(() => {
-    let current = true;
+    const controller = new AbortController();
     api
-      .me()
+      .me({ signal: controller.signal })
       .then(async ({ user: nextUser }) => {
-        if (!current) {
+        if (controller.signal.aborted) {
           return;
         }
         setUser(nextUser);
-        await refreshData();
+        await refreshData(controller.signal);
       })
       .catch((err: Error) => {
-        if (current) {
-          if (err.message === "Authentication required" || err.message === "Invalid token") {
-            setUser(null);
-            return;
-          }
-
-          // A data request can fail after authentication succeeds. Keep the
-          // session intact so a transient API/database error does not log out
-          // the user.
-          onError(err.message);
+        if (controller.signal.aborted || isAbortError(err)) {
+          return;
         }
+
+        if (err.message === "Authentication required" || err.message === "Invalid token") {
+          setUser(null);
+          return;
+        }
+
+        // A data request can fail after authentication succeeds. Keep the
+        // session intact so a transient API/database error does not log out
+        // the user.
+        onError(err.message);
       })
       .finally(() => {
-        if (current) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       });
 
     return () => {
-      current = false;
+      controller.abort();
     };
   }, [onError, refreshData]);
 
@@ -73,36 +95,67 @@ export function useAppData(onError: (message: string) => void) {
     setRankings([]);
     setMatches([]);
     setMatchesHasMore(false);
+    setLoadingMoreMatches(false);
     setProfileMatches([]);
+    setProfileInsights(null);
   }, []);
 
   const loadProfileMatches = useCallback(
     (playerId: string, fallbackMessage: string) => {
-      let isCurrent = true;
+      const controller = new AbortController();
       setProfileMatches([]);
       setProfileLoading(true);
 
       api
-        .matches(playerId)
+        .matches(playerId, undefined, { signal: controller.signal })
         .then((result) => {
-          if (isCurrent) {
+          if (!controller.signal.aborted) {
             setProfileMatches(result.matches);
           }
         })
         .catch((err: Error) => {
-          if (isCurrent) {
+          if (!controller.signal.aborted && !isAbortError(err)) {
             onError(err instanceof Error ? err.message : fallbackMessage);
           }
         })
         .finally(() => {
-          if (isCurrent) {
+          if (!controller.signal.aborted) {
             setProfileLoading(false);
           }
         });
 
       return () => {
-        isCurrent = false;
+        controller.abort();
       };
+    },
+    [onError],
+  );
+
+  const loadProfileInsights = useCallback(
+    (playerId: string, fallbackMessage: string) => {
+      const controller = new AbortController();
+      setProfileInsights(null);
+      setProfileInsightsLoading(true);
+
+      api
+        .playerInsights(playerId, { signal: controller.signal })
+        .then((result) => {
+          if (!controller.signal.aborted) {
+            setProfileInsights(result.insights);
+          }
+        })
+        .catch((err: Error) => {
+          if (!controller.signal.aborted && !isAbortError(err)) {
+            onError(err instanceof Error ? err.message : fallbackMessage);
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setProfileInsightsLoading(false);
+          }
+        });
+
+      return () => controller.abort();
     },
     [onError],
   );
@@ -115,11 +168,24 @@ export function useAppData(onError: (message: string) => void) {
     rankings,
     matches,
     matchesHasMore,
+    loadingMoreMatches,
     loadMoreMatches,
     profileMatches,
     profileLoading,
+    profileInsights,
+    profileInsightsLoading,
     refreshData,
     logout,
     loadProfileMatches,
+    loadProfileInsights,
   };
+}
+
+function mergeMatches(current: Match[], next: Match[]) {
+  const existing = new Set(current.map((match) => match.id));
+  return [...current, ...next.filter((match) => !existing.has(match.id))];
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }

@@ -1,4 +1,13 @@
-import type { CreateUserPayload, Match, MatchPayload, Player, PlayerGender, Ranking, User } from "./types.js";
+import type {
+  CreateUserPayload,
+  Match,
+  MatchPayload,
+  Player,
+  PlayerGender,
+  PlayerInsights,
+  Ranking,
+  User,
+} from "./types.js";
 
 export type ApiClientOptions = {
   baseUrl?: string;
@@ -9,6 +18,8 @@ export type ApiClientOptions = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
+
+export type ApiRequestOptions = Pick<RequestInit, "signal">;
 
 export type LoginResponse = {
   user: User;
@@ -91,8 +102,10 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
         await options.setToken?.(null);
       }
     },
-    me: () => request<{ user: User }>("/api/auth/me"),
-    players: () => request<{ players: Player[] }>("/api/players"),
+    me: (requestOptions: ApiRequestOptions = {}) => request<{ user: User }>("/api/auth/me", requestOptions),
+    players: (requestOptions: ApiRequestOptions = {}) => request<{ players: Player[] }>("/api/players", requestOptions),
+    playerInsights: (playerId: string, requestOptions: ApiRequestOptions = {}) =>
+      request<{ insights: PlayerInsights }>(`/api/players/${encodeURIComponent(playerId)}/insights`, requestOptions),
     createPlayer: (name: string, initialRating: number, gender: PlayerGender) =>
       request<{ player: Player }>("/api/players", {
         method: "POST",
@@ -108,14 +121,22 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
         method: "PATCH",
         body: JSON.stringify({ password }),
       }),
-    rankings: () => request<{ rankings: Ranking[] }>("/api/rankings"),
-    matches: (playerId?: string, page?: { limit?: number; offset?: number }) => {
+    rankings: (requestOptions: ApiRequestOptions = {}) =>
+      request<{ rankings: Ranking[] }>("/api/rankings", requestOptions),
+    matches: (
+      playerId?: string,
+      page?: { limit?: number; offset?: number },
+      requestOptions: ApiRequestOptions = {},
+    ) => {
       const query = new URLSearchParams();
       if (playerId) query.set("playerId", playerId);
       if (page?.limit !== undefined) query.set("limit", String(page.limit));
       if (page?.offset !== undefined) query.set("offset", String(page.offset));
       const queryString = query.toString();
-      return request<{ matches: Match[]; hasMore: boolean }>(`/api/matches${queryString ? `?${queryString}` : ""}`);
+      return request<{ matches: Match[]; hasMore: boolean }>(
+        `/api/matches${queryString ? `?${queryString}` : ""}`,
+        requestOptions,
+      );
     },
     createMatch: (payload: MatchPayload, idempotencyKey?: string) =>
       request<{ match: Match }>("/api/matches", {

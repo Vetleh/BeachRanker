@@ -43,6 +43,8 @@
     "empty": "Ingen kamper funnet.",
     "tiebreak": "Tiebreak",
     "unrated": "Urangert",
+    "loadMore": "Last flere",
+    "loadingMore": "Laster…",
     "enteredBy": "Registrert av {name}",
     "edit": "Rediger",
     "delete": "Slett",
@@ -55,7 +57,15 @@
   },
   "profile": {
     "backToRankings": "Rangering",
-    "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
+    "summary": "#{rank} · {rating} Elo · {wins}-{losses}",
+    "loadingInsights": "Laster innsikt...",
+    "ratingHistory": "Ratinghistorikk",
+    "current": "Nåværende",
+    "peak": "Topp",
+    "ratedMatches": "Rangerte kamper",
+    "noRatingHistory": "Ingen rangerte kamper ennå.",
+    "headToHead": "Innbyrdes oppgjør",
+    "noHeadToHead": "Ingen rangerte motspillere ennå."
   },
   "account": {
     "title": "Profil",

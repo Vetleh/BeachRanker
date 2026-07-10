@@ -1,8 +1,7 @@
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
-import * as SecureStore from "expo-secure-store";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,19 +16,17 @@ import {
   View,
 } from "react-native";
 import {
-  createBeachRankerApi,
   type Match,
   type MatchPayload,
   type MatchSet,
   type Player,
   type PlayerGender,
-  type Ranking,
+  type PlayerInsights,
   type Role,
-  type User,
 } from "@beach-ranker/api-client";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { INITIAL_RATING_OPTIONS } from "@beach-ranker/domain";
-import { languageOptions, translate, type Language, type TranslationKey } from "./i18n";
+import { languageOptions } from "./i18n";
 import {
   emptySets,
   normalizeSets,
@@ -37,36 +34,11 @@ import {
   type EditableMatchSet,
   type ScoreField,
 } from "./features/matches/model";
-
-const tokenKey = "beachranker_session";
-const languageKey = "beachranker_language";
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? "";
-
-type AuthState = {
-  user: User | null;
-  loading: boolean;
-  startupError: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  api: ReturnType<typeof createBeachRankerApi>;
-};
-
-type DataState = {
-  players: Player[];
-  rankings: Ranking[];
-  matches: Match[];
-  matchesHasMore: boolean;
-  loading: boolean;
-  refresh: () => Promise<void>;
-  loadMoreMatches: () => Promise<void>;
-};
-
-type LocaleState = {
-  language: Language;
-  dateLocale: string;
-  t: (key: TranslationKey) => string;
-  setLanguage: (language: Language) => Promise<void>;
-};
+import { AuthContext, apiBaseUrl, type AuthState, useAuth, useAuthContext } from "./features/auth/AuthProvider";
+import { AppDataProvider, useDataContext } from "./features/data/DataProvider";
+import { LocaleContext, useLocale, useLocaleContext } from "./features/locale/LocaleProvider";
+import { Segmented } from "./components/Segmented";
+import Svg, { Polyline } from "react-native-svg";
 
 type RankingsStackParamList = {
   RankingsHome: { gender: PlayerGender };
@@ -98,9 +70,6 @@ type RootTabParamList = {
   Admin: undefined;
 };
 
-const AuthContext = createContext<AuthState | null>(null);
-const DataContext = createContext<DataState | null>(null);
-const LocaleContext = createContext<LocaleState | null>(null);
 const RankingsStack = createNativeStackNavigator<RankingsStackParamList>();
 const MatchesStack = createNativeStackNavigator<MatchesStackParamList>();
 const AddStack = createNativeStackNavigator<AddStackParamList>();
@@ -190,30 +159,6 @@ export default function App() {
   );
 }
 
-function useAuthContext() {
-  const value = useContext(AuthContext);
-  if (!value) {
-    throw new Error("Auth context is not available");
-  }
-  return value;
-}
-
-function useDataContext() {
-  const value = useContext(DataContext);
-  if (!value) {
-    throw new Error("Data context is not available");
-  }
-  return value;
-}
-
-function useLocaleContext() {
-  const value = useContext(LocaleContext);
-  if (!value) {
-    throw new Error("Locale context is not available");
-  }
-  return value;
-}
-
 function TabIcon({
   name,
   color,
@@ -271,151 +216,6 @@ function TabIcon({
       <View style={[styles.adminIconHead, { borderColor: color }]} />
       <View style={[styles.adminIconBody, { borderColor: color }]} />
     </View>
-  );
-}
-
-function useAuth(): AuthState {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [startupError, setStartupError] = useState<string | null>(null);
-  const api = useMemo(
-    () =>
-      createBeachRankerApi({
-        baseUrl: apiBaseUrl,
-        authMode: "bearer",
-        getToken: () => SecureStore.getItemAsync(tokenKey),
-        setToken: async (token) => {
-          if (token) {
-            await SecureStore.setItemAsync(tokenKey, token);
-          } else {
-            await SecureStore.deleteItemAsync(tokenKey);
-          }
-        },
-      }),
-    [],
-  );
-
-  useEffect(() => {
-    api
-      .me()
-      .then((result) => setUser(result.user))
-      .catch((error: Error) => {
-        setUser(null);
-        setStartupError(error.message);
-      })
-      .finally(() => setLoading(false));
-  }, [api]);
-
-  return {
-    user,
-    loading,
-    startupError,
-    api,
-    login: async (email, password) => {
-      const result = await api.login(email, password);
-      setStartupError(null);
-      setUser(result.user);
-    },
-    logout: async () => {
-      try {
-        await api.logout();
-      } finally {
-        setUser(null);
-      }
-    },
-  };
-}
-
-function useLocale(): LocaleState {
-  const [language, setLanguageState] = useState<Language>("no");
-  const selectedOption = languageOptions.find((option) => option.value === language) ?? languageOptions[0];
-
-  useEffect(() => {
-    SecureStore.getItemAsync(languageKey)
-      .then((saved) => {
-        if (saved === "no" || saved === "en") {
-          setLanguageState(saved);
-        }
-      })
-      .catch(() => {
-        // The app can still switch language for this session if persistence fails.
-      });
-  }, []);
-
-  const setLanguage = useCallback(async (nextLanguage: Language) => {
-    setLanguageState(nextLanguage);
-    await SecureStore.setItemAsync(languageKey, nextLanguage);
-  }, []);
-
-  return useMemo(
-    () => ({
-      language,
-      dateLocale: selectedOption.dateLocale,
-      t: (key: TranslationKey) => translate(language, key),
-      setLanguage,
-    }),
-    [language, selectedOption.dateLocale, setLanguage],
-  );
-}
-
-function AppDataProvider({ children }: { children: ReactNode }) {
-  const { api } = useAuthContext();
-  const { t } = useLocaleContext();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [rankings, setRankings] = useState<Ranking[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [matchesHasMore, setMatchesHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    const errors: string[] = [];
-
-    try {
-      const playersResult = await api.players();
-      setPlayers(playersResult.players);
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : t("requestFailed"));
-    }
-
-    try {
-      const rankingsResult = await api.rankings();
-      setRankings(rankingsResult.rankings);
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : t("requestFailed"));
-    }
-
-    try {
-      const matchesResult = await api.matches(undefined, { limit: 200, offset: 0 });
-      setMatches(matchesResult.matches);
-      setMatchesHasMore(matchesResult.hasMore);
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : t("requestFailed"));
-    }
-
-    setLoading(false);
-    if (errors.length > 0) {
-      throw new Error(errors[0]);
-    }
-  }, [api, t]);
-
-  const loadMoreMatches = useCallback(async () => {
-    const result = await api.matches(undefined, { limit: 200, offset: matches.length });
-    setMatches((current) => [...current, ...result.matches]);
-    setMatchesHasMore(result.hasMore);
-  }, [api, matches.length]);
-
-  useEffect(() => {
-    refresh().catch((error: Error) => {
-      setLoading(false);
-      Alert.alert(t("requestFailed"), error.message);
-    });
-  }, [refresh, t]);
-
-  return (
-    <DataContext.Provider value={{ players, rankings, matches, matchesHasMore, loading, refresh, loadMoreMatches }}>
-      {children}
-    </DataContext.Provider>
   );
 }
 
@@ -536,13 +336,32 @@ function PlayerProfileScreen({ route }: NativeStackScreenProps<RankingsStackPara
   const player = rankings.find((candidate) => candidate.id === route.params.playerId);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<PlayerInsights | null>(null);
 
   useEffect(() => {
-    api
-      .matches(route.params.playerId)
-      .then((result) => setMatches(result.matches))
-      .catch((error: Error) => Alert.alert(t("loadingMatches"), error.message))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    Promise.all([
+      api.matches(route.params.playerId, undefined, { signal: controller.signal }),
+      api.playerInsights(route.params.playerId, { signal: controller.signal }),
+    ])
+      .then(([matchesResult, insightsResult]) => {
+        if (!controller.signal.aborted) {
+          setMatches(matchesResult.matches);
+          setInsights(insightsResult.insights);
+        }
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) {
+          Alert.alert(t("loadingMatches"), error.message);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [api, route.params.playerId, t]);
 
   if (!player) {
@@ -555,8 +374,72 @@ function PlayerProfileScreen({ route }: NativeStackScreenProps<RankingsStackPara
         title={player.name}
         subtitle={`#${player.rank} · ${player.rating} Elo · ${player.wins}-${player.losses}`}
       />
+      {insights && <ProfileInsights insights={insights} />}
       {loading ? <Centered label={t("loadingMatches")} /> : <MatchList matches={matches} />}
     </Screen>
+  );
+}
+
+function ProfileInsights({ insights }: { insights: PlayerInsights }) {
+  const { dateLocale, t } = useLocaleContext();
+  const points = insights.ratingHistory;
+  const ratings = points.map((point) => point.rating);
+  const min = Math.min(...ratings);
+  const max = Math.max(...ratings);
+  const range = max - min || 1;
+  const polylinePoints = points
+    .map((point, index) => {
+      const x = 12 + (index / Math.max(points.length - 1, 1)) * 276;
+      const y = 120 - 12 - ((point.rating - min) / range) * 96;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <View style={styles.insightsCard}>
+      <Text style={styles.sectionTitle}>{t("ratingHistory")}</Text>
+      <View style={styles.insightSummary}>
+        <InsightMetric label={t("current")} value={insights.summary.currentRating} />
+        <InsightMetric label={t("peak")} value={insights.summary.peakRating} />
+        <InsightMetric label={t("ratedMatches")} value={insights.summary.ratedMatches} />
+      </View>
+      {points.length === 0 ? (
+        <Text style={styles.rowMeta}>{t("noRatingHistory")}</Text>
+      ) : (
+        <>
+          <Svg width="100%" height={120} viewBox="0 0 300 120" style={styles.ratingChart}>
+            <Polyline points={polylinePoints} fill="none" stroke={colors.green} strokeWidth={3} />
+          </Svg>
+          <View style={styles.chartDates}>
+            <Text style={styles.rowMeta}>{new Date(points[0].playedAt).toLocaleDateString(dateLocale)}</Text>
+            <Text style={styles.rowMeta}>{new Date(points.at(-1)?.playedAt ?? "").toLocaleDateString(dateLocale)}</Text>
+          </View>
+        </>
+      )}
+      <Text style={styles.sectionTitle}>{t("headToHead")}</Text>
+      {insights.headToHead.length === 0 ? (
+        <Text style={styles.rowMeta}>{t("noHeadToHead")}</Text>
+      ) : (
+        insights.headToHead.map((record) => (
+          <View key={record.playerId} style={styles.headToHeadRow}>
+            <Text style={styles.rowTitle}>{record.playerName}</Text>
+            <Text style={styles.rowMeta}>
+              {record.wins}-{record.losses}
+            </Text>
+            <Text style={styles.rowMeta}>{Math.round((record.wins / record.matchesPlayed) * 100)}%</Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
+function InsightMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.insightMetric}>
+      <Text style={styles.rowMeta}>{label}</Text>
+      <Text style={styles.rating}>{value}</Text>
+    </View>
   );
 }
 
@@ -572,13 +455,14 @@ function MatchesNavigator() {
 
 function MatchesScreen({ navigation }: NativeStackScreenProps<MatchesStackParamList, "MatchesHome">) {
   const { user, api } = useAuthContext();
-  const { matches, matchesHasMore, loadMoreMatches, refresh } = useDataContext();
+  const { matches, matchesHasMore, loadingMoreMatches, loadMoreMatches, refresh } = useDataContext();
 
   return (
     <Screen scroll={false}>
       <MatchList
         matches={matches}
         hasMore={matchesHasMore}
+        loadingMore={loadingMoreMatches}
         onLoadMore={loadMoreMatches}
         canEdit={user?.role === "ADMIN"}
         onEdit={(match) => navigation.navigate("MatchEditor", { matchId: match.id })}
@@ -895,6 +779,7 @@ function MatchList({
   onEdit,
   onDelete,
   hasMore = false,
+  loadingMore = false,
   onLoadMore,
 }: {
   matches: Match[];
@@ -902,6 +787,7 @@ function MatchList({
   onEdit?: (match: Match) => void;
   onDelete?: (match: Match) => Promise<void>;
   hasMore?: boolean;
+  loadingMore?: boolean;
   onLoadMore?: () => Promise<void>;
 }) {
   const { t, dateLocale } = useLocaleContext();
@@ -942,7 +828,13 @@ function MatchList({
         </View>
       )}
       ListFooterComponent={
-        hasMore && onLoadMore ? <SecondaryButton label={t("loadMore")} onPress={onLoadMore} /> : null
+        hasMore && onLoadMore ? (
+          <SecondaryButton
+            label={loadingMore ? t("loadingMore") : t("loadMore")}
+            disabled={loadingMore}
+            onPress={onLoadMore}
+          />
+        ) : null
       }
     />
   );
@@ -1207,30 +1099,6 @@ function toMatchPlayedAtIso(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12, 0, 0).toISOString();
 }
 
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T;
-  options: Array<{ label: string; value: T }>;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <View style={styles.segmented}>
-      {options.map((option) => (
-        <Pressable
-          key={option.value}
-          style={[styles.segment, value === option.value && styles.segmentActive]}
-          onPress={() => onChange(option.value)}
-        >
-          <Text style={[styles.segmentText, value === option.value && styles.segmentTextActive]}>{option.label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 function PrimaryButton({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
   return (
     <Pressable style={[styles.primaryButton, disabled && styles.disabled]} disabled={disabled} onPress={onPress}>
@@ -1239,9 +1107,9 @@ function PrimaryButton({ label, disabled, onPress }: { label: string; disabled?:
   );
 }
 
-function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+function SecondaryButton({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
   return (
-    <Pressable style={styles.secondaryButton} onPress={onPress}>
+    <Pressable style={[styles.secondaryButton, disabled && styles.disabled]} disabled={disabled} onPress={onPress}>
       <Text style={styles.secondaryButtonText}>{label}</Text>
     </Pressable>
   );
@@ -1806,6 +1674,41 @@ const styles = StyleSheet.create({
   profileMeta: {
     color: colors.muted,
     fontSize: 14,
+  },
+  insightsCard: {
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: colors.card,
+  },
+  insightSummary: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  insightMetric: {
+    flex: 1,
+    gap: 2,
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#f4f7f2",
+  },
+  ratingChart: {
+    borderRadius: 8,
+    backgroundColor: "#f4f7f2",
+  },
+  chartDates: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  headToHeadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: "#f4f7f2",
   },
   logoutText: {
     color: colors.green,

@@ -30,7 +30,14 @@ import type { Env } from "./env";
 import { ApiError, json, noContent, readJson, requireString } from "./http";
 import { assertLoginAllowed, clearLoginAttempts, loginAttemptKey, recordFailedLogin } from "./loginLimiter";
 import { withRatingWriteLock } from "./ratingWriteLock";
-import { formatMatch, getMatches, getMatchesForPlayer, getRankings, recalculateRatings } from "./ratingService";
+import {
+  formatMatch,
+  getMatches,
+  getMatchesForPlayer,
+  getPlayerInsights,
+  getRankings,
+  recalculateRatings,
+} from "./ratingService";
 import {
   deriveWinnerFromSets,
   parseLogin,
@@ -56,6 +63,7 @@ const routes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: "POST", pattern: /^\/api\/auth\/logout$/, handler: logout },
   { method: "GET", pattern: /^\/api\/auth\/me$/, handler: me },
   { method: "GET", pattern: /^\/api\/players$/, handler: players },
+  { method: "GET", pattern: /^\/api\/players\/(?<id>[^/]+)\/insights$/, handler: playerInsights },
   { method: "POST", pattern: /^\/api\/players$/, handler: addPlayer },
   { method: "PATCH", pattern: /^\/api\/players\/(?<id>[^/]+)$/, handler: editPlayer },
   { method: "POST", pattern: /^\/api\/users$/, handler: addUser },
@@ -126,6 +134,16 @@ async function me({ request, env }: RouteContext) {
 async function players({ request, env }: RouteContext) {
   requireAuth(await getAuthUser(request, env));
   return json({ players: await listPlayers(env.DB) });
+}
+
+async function playerInsights({ request, env, params }: RouteContext) {
+  requireAuth(await getAuthUser(request, env));
+  const playerId = requireString(params.id, "id");
+  const insights = await getPlayerInsights(env.DB, playerId);
+  if (!insights) {
+    throw new ApiError(404, "Player not found");
+  }
+  return json({ insights });
 }
 
 async function addPlayer({ request, env }: RouteContext) {

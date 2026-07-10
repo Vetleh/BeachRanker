@@ -410,6 +410,63 @@ th {
   gap: 14px;
 }
 
+.insights-card {
+  display: grid;
+  gap: 16px;
+}
+
+.insights-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.insight-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.insight-summary span {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f4f7f2;
+}
+
+.insight-summary small,
+.head-to-head-row span {
+  color: #65726b;
+}
+
+.insight-summary strong {
+  font-size: 18px;
+}
+
+.rating-chart {
+  width: 100%;
+  height: 180px;
+  color: #19705f;
+  border-radius: 8px;
+  background: #f4f7f2;
+}
+
+.head-to-head-list {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #d9e1d7;
+  border-radius: 8px;
+}
+
+.head-to-head-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #f4f7f2;
+}
+
 .account-layout {
   display: grid;
   max-width: 560px;

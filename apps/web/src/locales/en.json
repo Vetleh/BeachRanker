@@ -44,6 +44,7 @@
     "tiebreak": "Tiebreak",
     "unrated": "Unrated",
     "loadMore": "Load more",
+    "loadingMore": "Loading…",
     "enteredBy": "Entered by {name}",
     "edit": "Edit",
     "delete": "Delete",
@@ -56,7 +57,15 @@
   },
   "profile": {
     "backToRankings": "Rankings",
-    "summary": "#{rank} · {rating} Elo · {wins}-{losses}"
+    "summary": "#{rank} · {rating} Elo · {wins}-{losses}",
+    "loadingInsights": "Loading insights...",
+    "ratingHistory": "Rating history",
+    "current": "Current",
+    "peak": "Peak",
+    "ratedMatches": "Rated matches",
+    "noRatingHistory": "No rated matches yet.",
+    "headToHead": "Head-to-head",
+    "noHeadToHead": "No rated opponents yet."
   },
   "account": {
     "title": "Profile",

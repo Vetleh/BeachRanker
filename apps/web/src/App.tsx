@@ -4,7 +4,7 @@ import { api, type MatchPayload } from "./api";
 import { translate, type Language, type TranslationPath } from "./i18n";
 import { getActiveTab, useBrowserRoute, type RankingGender, type Tab } from "./router";
 import { deriveWinner, formatScore } from "./score";
-import type { Match, Player, PlayerGender, Ranking, Role, User } from "./types";
+import type { Match, Player, PlayerGender, PlayerInsights, Ranking, Role, User } from "./types";
 import { useAppData } from "./useAppData";
 import { INITIAL_RATING_OPTIONS, validateMatchSets } from "@beach-ranker/domain";
 import {
@@ -31,12 +31,16 @@ export function App() {
     rankings,
     matches,
     matchesHasMore,
+    loadingMoreMatches,
     loadMoreMatches,
     profileMatches,
     profileLoading,
+    profileInsights,
+    profileInsightsLoading,
     refreshData,
     logout,
     loadProfileMatches,
+    loadProfileInsights,
   } = useAppData(showError);
   const t = (path: TranslationPath, values?: Record<string, string | number>) => translate(language, path, values);
   const activeTab = getActiveTab(route);
@@ -75,8 +79,14 @@ export function App() {
       return;
     }
 
-    return loadProfileMatches(profilePlayerId, translate(language, "errors.loadProfile"));
-  }, [language, loadProfileMatches, route.name, profilePlayerId, selectedProfile?.id, user]);
+    const fallback = translate(language, "errors.loadProfile");
+    const cancelMatches = loadProfileMatches(profilePlayerId, fallback);
+    const cancelInsights = loadProfileInsights(profilePlayerId, fallback);
+    return () => {
+      cancelMatches();
+      cancelInsights();
+    };
+  }, [language, loadProfileInsights, loadProfileMatches, route.name, profilePlayerId, selectedProfile?.id, user]);
 
   if (loading) {
     return <div className="centered">{t("app.loading")}</div>;
@@ -163,6 +173,7 @@ export function App() {
               await refreshData();
             }}
             hasMore={matchesHasMore}
+            loadingMore={loadingMoreMatches}
             onLoadMore={loadMoreMatches}
           />
         )}
@@ -172,6 +183,8 @@ export function App() {
               player={selectedProfile}
               matches={profileMatches}
               loading={profileLoading}
+              insights={profileInsights}
+              insightsLoading={profileInsightsLoading}
               t={t}
               onBack={() => navigate(`/rankings/${selectedProfile.gender === "WOMEN" ? "women" : "men"}`)}
             />
@@ -574,6 +587,7 @@ function MatchesView({
   onEdit,
   onDelete,
   hasMore,
+  loadingMore,
   onLoadMore,
 }: {
   matches: Match[];
@@ -584,6 +598,7 @@ function MatchesView({
   onEdit: (match: Match) => void;
   onDelete: (matchId: string) => Promise<void>;
   hasMore?: boolean;
+  loadingMore?: boolean;
   onLoadMore?: () => Promise<void>;
 }) {
   const [busyMatchId, setBusyMatchId] = useState("");
@@ -683,8 +698,8 @@ function MatchesView({
         </article>
       ))}
       {hasMore && onLoadMore && (
-        <button type="button" onClick={() => void onLoadMore()}>
-          {t("matches.loadMore")}
+        <button type="button" disabled={loadingMore} onClick={() => void onLoadMore()}>
+          {loadingMore ? t("matches.loadingMore") : t("matches.loadMore")}
         </button>
       )}
     </section>
@@ -695,12 +710,16 @@ function PlayerProfileView({
   player,
   matches,
   loading,
+  insights,
+  insightsLoading,
   t,
   onBack,
 }: {
   player: Ranking;
   matches: Match[];
   loading: boolean;
+  insights: PlayerInsights | null;
+  insightsLoading: boolean;
   t: Translator;
   onBack: () => void;
 }) {
@@ -728,6 +747,7 @@ function PlayerProfileView({
           </div>
         </div>
       </div>
+      <ProfileInsights insights={insights} loading={insightsLoading} t={t} />
       {loading ? (
         <section className="surface">
           <p className="empty-state">{t("matches.loading")}</p>
@@ -744,6 +764,89 @@ function PlayerProfileView({
         />
       )}
     </section>
+  );
+}
+
+function ProfileInsights({
+  insights,
+  loading,
+  t,
+}: {
+  insights: PlayerInsights | null;
+  loading: boolean;
+  t: Translator;
+}) {
+  if (loading) {
+    return (
+      <section className="surface">
+        <p className="empty-state">{t("profile.loadingInsights")}</p>
+      </section>
+    );
+  }
+  if (!insights) {
+    return null;
+  }
+
+  return (
+    <section className="surface insights-card">
+      <div className="section-heading compact">
+        <h2>{t("profile.ratingHistory")}</h2>
+      </div>
+      <div className="insight-summary">
+        <span>
+          <small>{t("profile.current")}</small>
+          <strong>{insights.summary.currentRating}</strong>
+        </span>
+        <span>
+          <small>{t("profile.peak")}</small>
+          <strong>{insights.summary.peakRating}</strong>
+        </span>
+        <span>
+          <small>{t("profile.ratedMatches")}</small>
+          <strong>{insights.summary.ratedMatches}</strong>
+        </span>
+      </div>
+      <RatingHistoryChart points={insights.ratingHistory} emptyLabel={t("profile.noRatingHistory")} />
+      <h3>{t("profile.headToHead")}</h3>
+      {insights.headToHead.length === 0 ? (
+        <p className="empty-state">{t("profile.noHeadToHead")}</p>
+      ) : (
+        <div className="head-to-head-list">
+          {insights.headToHead.map((record) => (
+            <div key={record.playerId} className="head-to-head-row">
+              <strong>{record.playerName}</strong>
+              <span>
+                {record.wins}-{record.losses}
+              </span>
+              <span>{Math.round((record.wins / record.matchesPlayed) * 100)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RatingHistoryChart({ points, emptyLabel }: { points: PlayerInsights["ratingHistory"]; emptyLabel: string }) {
+  if (points.length === 0) return <p className="empty-state">{emptyLabel}</p>;
+  const width = 600;
+  const height = 180;
+  const padding = 18;
+  const ratings = points.map((point) => point.rating);
+  const min = Math.min(...ratings);
+  const max = Math.max(...ratings);
+  const range = max - min || 1;
+  const path = points
+    .map((point, index) => {
+      const x = padding + (index / Math.max(points.length - 1, 1)) * (width - padding * 2);
+      const y = height - padding - ((point.rating - min) / range) * (height - padding * 2);
+      return `${index === 0 ? "M" : "L"}${x} ${y}`;
+    })
+    .join(" ");
+  return (
+    <svg className="rating-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Rating history">
+      <path d={path} fill="none" stroke="currentColor" strokeWidth="3" />
+    </svg>
   );
 }
 

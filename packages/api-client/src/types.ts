@@ -27,6 +27,31 @@ export type Ranking = Player & {
   recentDelta: number;
 };
 
+export type RatingHistoryPoint = {
+  matchId: string;
+  playedAt: string;
+  rating: number;
+  delta: number;
+};
+
+export type HeadToHeadRecord = {
+  playerId: string;
+  playerName: string;
+  wins: number;
+  losses: number;
+  matchesPlayed: number;
+};
+
+export type PlayerInsights = {
+  summary: {
+    currentRating: number;
+    peakRating: number;
+    ratedMatches: number;
+  };
+  ratingHistory: RatingHistoryPoint[];
+  headToHead: HeadToHeadRecord[];
+};
+
 export type MatchSet = {
   id?: string;
   setNumber?: number;
