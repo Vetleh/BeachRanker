@@ -254,6 +254,9 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   if (/FROM players WHERE id = \?/i.test(sql)) {
     return getTable(tables, "players").filter((row) => row.id === values[0]);
   }
+  if (/^SELECT id FROM matches WHERE id = \?/i.test(sql.trim())) {
+    return getTable(tables, "matches").filter((row) => row.id === values[0]);
+  }
   if (/FROM rating_recalc_lock WHERE id = \?/i.test(sql)) {
     return getTable(tables, "rating_recalc_lock").filter((row) => row.id === values[0]);
   }

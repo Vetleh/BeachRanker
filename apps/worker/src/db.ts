@@ -188,6 +188,10 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
 }
 
 export async function updateMatch(db: D1Database, matchId: string, input: MatchInput, winningTeam: "A" | "B") {
+  const existing = await db.prepare("SELECT id FROM matches WHERE id = ?").bind(matchId).first<{ id: string }>();
+  if (!existing) {
+    return false;
+  }
   const isTiebreak = input.isTiebreak ?? input.sets.length >= 3;
   const isRanked = input.isRanked ?? true;
   await db.batch([
@@ -210,10 +214,16 @@ export async function updateMatch(db: D1Database, matchId: string, input: MatchI
     db.prepare("DELETE FROM match_sets WHERE matchId = ?").bind(matchId),
     ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set)),
   ]);
+  return true;
 }
 
 export async function deleteMatch(db: D1Database, matchId: string) {
+  const existing = await db.prepare("SELECT id FROM matches WHERE id = ?").bind(matchId).first<{ id: string }>();
+  if (!existing) {
+    return false;
+  }
   await db.prepare("DELETE FROM matches WHERE id = ?").bind(matchId).run();
+  return true;
 }
 
 export async function addAuditLog(

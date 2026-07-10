@@ -228,7 +228,10 @@ async function correctMatch({ request, env, params }: RouteContext) {
   const winningTeam = deriveWinnerFromSets(input.sets);
   const matchId = requireString(params.id, "id");
   return withRatingWriteLock(env.DB, async () => {
-    await updateMatch(env.DB, matchId, input, winningTeam);
+    const updated = await updateMatch(env.DB, matchId, input, winningTeam);
+    if (!updated) {
+      throw new ApiError(404, "Match not found");
+    }
     await recalculateRatings(env.DB);
     await addAuditLog(env.DB, { actorUserId: user.id, action: "UPDATE", entityType: "MATCH", entityId: matchId });
     const match = (await listMatches(env.DB)).find((candidate) => candidate.id === matchId);
@@ -243,7 +246,10 @@ async function removeMatch({ request, env, params }: RouteContext) {
   const user = requireAdmin(await getAuthUser(request, env));
   const matchId = requireString(params.id, "id");
   return withRatingWriteLock(env.DB, async () => {
-    await deleteMatch(env.DB, matchId);
+    const deleted = await deleteMatch(env.DB, matchId);
+    if (!deleted) {
+      throw new ApiError(404, "Match not found");
+    }
     await recalculateRatings(env.DB);
     await addAuditLog(env.DB, { actorUserId: user.id, action: "DELETE", entityType: "MATCH", entityId: matchId });
     return noContent();
