@@ -196,11 +196,25 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
         playedAt: values[0],
         winningTeam: values[1],
         isTiebreak: values[2],
-        teamAPlayer1Id: values[3],
-        teamAPlayer2Id: values[4],
-        teamBPlayer1Id: values[5],
-        teamBPlayer2Id: values[6],
-        updatedAt: values[7],
+        isRanked: values[3],
+        teamAPlayer1Id: values[4],
+        teamAPlayer2Id: values[5],
+        teamBPlayer1Id: values[6],
+        teamBPlayer2Id: values[7],
+        updatedAt: values[8],
+      });
+    }
+    return;
+  }
+
+  const updateUserPassword = sql.match(/^UPDATE users SET passwordHash = /i);
+  if (updateUserPassword) {
+    const user = getTable(tables, "users").find((row) => row.id === values[2]);
+    if (user) {
+      Object.assign(user, {
+        passwordHash: values[0],
+        sessionVersion: Number(user.sessionVersion ?? 0) + 1,
+        updatedAt: values[1],
       });
     }
     return;
@@ -242,6 +256,15 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   }
   if (/FROM login_attempts WHERE key = \?/i.test(sql)) {
     return getTable(tables, "login_attempts").filter((row) => row.key === values[0]);
+  }
+  if (/FROM audit_log/i.test(sql)) {
+    const users = getTable(tables, "users");
+    return [...getTable(tables, "audit_log")]
+      .sort((left, right) => String(right.createdAt ?? "").localeCompare(String(left.createdAt ?? "")))
+      .map((row) => ({
+        ...row,
+        actorDisplayName: users.find((user) => user.id === row.actorUserId)?.displayName,
+      }));
   }
   if (/COUNT\(\*\) as count FROM players/i.test(sql)) {
     const ids = values;
