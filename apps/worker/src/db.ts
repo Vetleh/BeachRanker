@@ -148,7 +148,10 @@ export async function updateUserPassword(db: D1Database, userId: string, passwor
 }
 
 export async function revokeUserSessions(db: D1Database, userId: string) {
-  await db.prepare("UPDATE users SET sessionVersion = sessionVersion + 1, updatedAt = ? WHERE id = ?").bind(nowIso(), userId).run();
+  await db
+    .prepare("UPDATE users SET sessionVersion = sessionVersion + 1, updatedAt = ? WHERE id = ?")
+    .bind(nowIso(), userId)
+    .run();
 }
 
 export async function countActivePlayers(db: D1Database, playerIds: string[]) {
@@ -296,9 +299,8 @@ export async function listMatches(db: D1Database, playerId?: string, page?: { li
     : playerId
       ? [playerId]
       : [];
-  const { results } = bindValues.length > 0
-    ? await statement.bind(...bindValues).all<MatchRow>()
-    : await statement.all<MatchRow>();
+  const { results } =
+    bindValues.length > 0 ? await statement.bind(...bindValues).all<MatchRow>() : await statement.all<MatchRow>();
   return results;
 }
 

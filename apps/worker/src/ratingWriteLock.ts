@@ -29,10 +29,7 @@ export async function withRatingWriteLock<T>(db: D1Database, operation: () => Pr
     }
 
     if (current) {
-      await db
-        .prepare("DELETE FROM rating_recalc_lock WHERE id = ? AND expiresAt <= ?")
-        .bind(lockId, now)
-        .run();
+      await db.prepare("DELETE FROM rating_recalc_lock WHERE id = ? AND expiresAt <= ?").bind(lockId, now).run();
     }
 
     try {

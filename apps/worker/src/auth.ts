@@ -27,7 +27,9 @@ export async function createSessionCookie(env: Env, userId: string) {
 }
 
 export async function createSessionToken(env: Env, userId: string) {
-  const user = await env.DB.prepare("SELECT sessionVersion FROM users WHERE id = ?").bind(userId).first<{ sessionVersion: number }>();
+  const user = await env.DB.prepare("SELECT sessionVersion FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ sessionVersion: number }>();
   if (!user) {
     throw new ApiError(401, "Authentication required");
   }

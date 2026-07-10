@@ -941,7 +941,9 @@ function MatchList({
           )}
         </View>
       )}
-      ListFooterComponent={hasMore && onLoadMore ? <SecondaryButton label={t("loadMore")} onPress={onLoadMore} /> : null}
+      ListFooterComponent={
+        hasMore && onLoadMore ? <SecondaryButton label={t("loadMore")} onPress={onLoadMore} /> : null
+      }
     />
   );
 }

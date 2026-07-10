@@ -16,10 +16,7 @@ export function loginAttemptKey(request: Request, email: string) {
 
 export async function assertLoginAllowed(db: D1Database, key: string) {
   const now = Date.now();
-  await db
-    .prepare("DELETE FROM login_attempts WHERE resetAt <= ? AND lockedUntil <= ?")
-    .bind(now, now)
-    .run();
+  await db.prepare("DELETE FROM login_attempts WHERE resetAt <= ? AND lockedUntil <= ?").bind(now, now).run();
   const attempt = await getAttempt(db, key);
   if (!attempt) {
     return;

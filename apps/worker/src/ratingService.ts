@@ -140,7 +140,9 @@ async function formatMatches(db: D1Database, matches: MatchRow[]) {
     snapshotsByMatch.set(snapshot.matchId, matchSnapshots);
   });
 
-  return matches.map((match) => formatMatchData(match, setsByMatch.get(match.id) ?? [], snapshotsByMatch.get(match.id) ?? []));
+  return matches.map((match) =>
+    formatMatchData(match, setsByMatch.get(match.id) ?? [], snapshotsByMatch.get(match.id) ?? []),
+  );
 }
 
 function formatMatchData(match: MatchRow, sets: MatchSetRow[], snapshots: RatingSnapshot[]) {

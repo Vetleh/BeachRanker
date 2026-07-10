@@ -126,7 +126,9 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
-  const deleteExpiredLoginAttempts = sql.match(/^DELETE FROM login_attempts WHERE resetAt <= \? AND lockedUntil <= \?/i);
+  const deleteExpiredLoginAttempts = sql.match(
+    /^DELETE FROM login_attempts WHERE resetAt <= \? AND lockedUntil <= \?/i,
+  );
   if (deleteExpiredLoginAttempts) {
     tables.set(
       "login_attempts",
@@ -230,7 +232,9 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
-  const updatePlayerUser = sql.match(/^UPDATE players SET userId = \?, updatedAt = \? WHERE id = \?(?: AND userId IS NULL)?/i);
+  const updatePlayerUser = sql.match(
+    /^UPDATE players SET userId = \?, updatedAt = \? WHERE id = \?(?: AND userId IS NULL)?/i,
+  );
   if (updatePlayerUser) {
     const player = getTable(tables, "players").find((row) => row.id === values[2]);
     if (player && (values.length < 4 || player.userId == null)) {
