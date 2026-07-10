@@ -153,6 +153,7 @@ describe("BeachRanker Worker API", () => {
             { teamAPoints: 18, teamBPoints: 21 },
             { teamAPoints: 15, teamBPoints: 12 },
           ],
+          isTiebreak: false,
         }),
       }),
       testEnv,
