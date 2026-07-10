@@ -38,7 +38,8 @@ jobs:
           build-mode: manual
 
       - name: Install CocoaPods dependencies
-        run: pod install --project-directory=apps/mobile/ios --deployment
+        working-directory: apps/mobile
+        run: pod install --project-directory=ios --deployment
 
       - name: Build iOS app for CodeQL
         run: >-
