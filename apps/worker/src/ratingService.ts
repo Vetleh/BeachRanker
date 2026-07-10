@@ -1,7 +1,14 @@
-import { listMatches, listPlayers, listSets, listSnapshots, replaceAllSnapshots, snapshotsForMatch } from "./db";
+import {
+  listMatches,
+  listPlayers,
+  listSetsForMatches,
+  listSnapshots,
+  snapshotsForMatches,
+  replaceAllSnapshots,
+} from "./db";
 import type { D1Database } from "./env";
 import { calculateElo, STARTING_RATING } from "./elo";
-import type { MatchRow, PlayerGender, RatingSnapshot } from "./types";
+import type { MatchRow, MatchSet, PlayerGender, RatingSnapshot } from "./types";
 
 export async function recalculateRatings(db: D1Database) {
   const [matches, players] = await Promise.all([listMatches(db), listPlayers(db)]);
@@ -113,7 +120,30 @@ export async function getRankings(db: D1Database) {
 }
 
 export async function formatMatch(db: D1Database, match: MatchRow) {
-  const [sets, snapshots] = await Promise.all([listSets(db, match.id), snapshotsForMatch(db, match.id)]);
+  const [formatted] = await formatMatches(db, [match]);
+  return formatted;
+}
+
+async function formatMatches(db: D1Database, matches: MatchRow[]) {
+  const matchIds = matches.map((match) => match.id);
+  const [sets, snapshots] = await Promise.all([listSetsForMatches(db, matchIds), snapshotsForMatches(db, matchIds)]);
+  const setsByMatch = new Map<string, MatchSetRow[]>();
+  const snapshotsByMatch = new Map<string, RatingSnapshot[]>();
+  sets.forEach((set) => {
+    const matchSets = setsByMatch.get(set.matchId) ?? [];
+    matchSets.push(set);
+    setsByMatch.set(set.matchId, matchSets);
+  });
+  snapshots.forEach((snapshot) => {
+    const matchSnapshots = snapshotsByMatch.get(snapshot.matchId) ?? [];
+    matchSnapshots.push(snapshot);
+    snapshotsByMatch.set(snapshot.matchId, matchSnapshots);
+  });
+
+  return matches.map((match) => formatMatchData(match, setsByMatch.get(match.id) ?? [], snapshotsByMatch.get(match.id) ?? []));
+}
+
+function formatMatchData(match: MatchRow, sets: MatchSetRow[], snapshots: RatingSnapshot[]) {
   const rated = isRatedMatch(match);
   const ratingSnapshots = rated ? snapshots : [];
   return {
@@ -131,7 +161,7 @@ export async function formatMatch(db: D1Database, match: MatchRow) {
       { id: match.teamBPlayer1Id, name: match.teamBPlayer1Name, deltaFor: ratingSnapshots },
       { id: match.teamBPlayer2Id, name: match.teamBPlayer2Name, deltaFor: ratingSnapshots },
     ].map(formatMatchPlayer),
-    sets,
+    sets: sets.map(({ matchId: _matchId, ...set }) => set),
     enteredBy: {
       id: match.enteredByUserId,
       displayName: match.enteredByDisplayName,
@@ -141,12 +171,12 @@ export async function formatMatch(db: D1Database, match: MatchRow) {
 
 export async function getMatches(db: D1Database) {
   const matches = await listMatches(db);
-  return Promise.all(matches.map((match) => formatMatch(db, match)));
+  return formatMatches(db, matches);
 }
 
 export async function getMatchesForPlayer(db: D1Database, playerId: string) {
   const matches = await listMatches(db, playerId);
-  return Promise.all(matches.map((match) => formatMatch(db, match)));
+  return formatMatches(db, matches);
 }
 
 function formatMatchPlayer(player: { id: string; name: string; deltaFor: RatingSnapshot[] }) {
@@ -169,3 +199,7 @@ function isRatedMatch(match: MatchRow) {
   ];
   return genders.every((gender) => gender === genders[0]);
 }
+
+type MatchSetRow = Required<Pick<MatchSet, "id" | "setNumber" | "teamAPoints" | "teamBPoints">> & {
+  matchId: string;
+};

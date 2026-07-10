@@ -253,6 +253,9 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   if (/FROM rating_snapshots WHERE matchId = \?/i.test(sql)) {
     return getTable(tables, "rating_snapshots").filter((row) => row.matchId === values[0]);
   }
+  if (/FROM rating_snapshots WHERE matchId IN/i.test(sql)) {
+    return getTable(tables, "rating_snapshots").filter((row) => values.includes(row.matchId));
+  }
   if (/FROM rating_snapshots/i.test(sql)) {
     return getTable(tables, "rating_snapshots");
   }
@@ -260,6 +263,11 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
     return getTable(tables, "match_sets")
       .filter((row) => row.matchId === values[0])
       .sort((a, b) => Number(a.setNumber) - Number(b.setNumber));
+  }
+  if (/FROM match_sets\s+WHERE matchId IN/i.test(sql)) {
+    return getTable(tables, "match_sets")
+      .filter((row) => values.includes(row.matchId))
+      .sort((a, b) => String(a.matchId).localeCompare(String(b.matchId)) || Number(a.setNumber) - Number(b.setNumber));
   }
 
   throw new Error(`Unsupported select SQL: ${sql}`);

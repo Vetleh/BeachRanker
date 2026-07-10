@@ -293,6 +293,23 @@ export async function listSets(db: D1Database, matchId: string) {
   return results;
 }
 
+export async function listSetsForMatches(db: D1Database, matchIds: string[]) {
+  if (matchIds.length === 0) {
+    return [];
+  }
+  const placeholders = matchIds.map(() => "?").join(", ");
+  const { results } = await db
+    .prepare(
+      `SELECT id, matchId, setNumber, teamAPoints, teamBPoints
+       FROM match_sets
+       WHERE matchId IN (${placeholders})
+       ORDER BY matchId ASC, setNumber ASC`,
+    )
+    .bind(...matchIds)
+    .all<Required<MatchSet> & { matchId: string }>();
+  return results;
+}
+
 export async function listSnapshots(db: D1Database) {
   const { results } = await db
     .prepare(
@@ -314,6 +331,22 @@ export async function snapshotsForMatch(db: D1Database, matchId: string) {
   const { results } = await db
     .prepare("SELECT matchId, playerId, preRating, postRating, delta FROM rating_snapshots WHERE matchId = ?")
     .bind(matchId)
+    .all<RatingSnapshot>();
+  return results;
+}
+
+export async function snapshotsForMatches(db: D1Database, matchIds: string[]) {
+  if (matchIds.length === 0) {
+    return [];
+  }
+  const placeholders = matchIds.map(() => "?").join(", ");
+  const { results } = await db
+    .prepare(
+      `SELECT matchId, playerId, preRating, postRating, delta
+       FROM rating_snapshots
+       WHERE matchId IN (${placeholders})`,
+    )
+    .bind(...matchIds)
     .all<RatingSnapshot>();
   return results;
 }

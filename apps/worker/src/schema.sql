@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS match_sets (
   UNIQUE (matchId, setNumber)
 );
 
+CREATE INDEX IF NOT EXISTS match_sets_match_idx ON match_sets(matchId, setNumber);
+
 CREATE TABLE IF NOT EXISTS rating_snapshots (
   id TEXT PRIMARY KEY,
   matchId TEXT NOT NULL,
@@ -65,6 +67,13 @@ CREATE TABLE IF NOT EXISTS rating_snapshots (
   FOREIGN KEY (playerId) REFERENCES players(id) ON DELETE CASCADE,
   UNIQUE (matchId, playerId)
 );
+
+CREATE INDEX IF NOT EXISTS rating_snapshots_match_idx ON rating_snapshots(matchId);
+CREATE INDEX IF NOT EXISTS rating_snapshots_player_idx ON rating_snapshots(playerId);
+CREATE INDEX IF NOT EXISTS matches_team_a_player1_idx ON matches(teamAPlayer1Id);
+CREATE INDEX IF NOT EXISTS matches_team_a_player2_idx ON matches(teamAPlayer2Id);
+CREATE INDEX IF NOT EXISTS matches_team_b_player1_idx ON matches(teamBPlayer1Id);
+CREATE INDEX IF NOT EXISTS matches_team_b_player2_idx ON matches(teamBPlayer2Id);
 
 CREATE TABLE IF NOT EXISTS rating_recalc_lock (
   id TEXT PRIMARY KEY,
