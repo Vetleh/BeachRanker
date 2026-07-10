@@ -15,6 +15,7 @@ import {
   createUser,
   deleteMatch,
   findPlayerByUserId,
+  findMatchIdByIdempotencyKey,
   findUserByEmail,
   listMatches,
   listPlayers,
@@ -245,7 +246,19 @@ async function addMatch({ request, env }: RouteContext) {
   validateUniquePlayers(input.teamAPlayerIds, input.teamBPlayerIds);
   await assertPlayersExist(env, [...input.teamAPlayerIds, ...input.teamBPlayerIds]);
   const winningTeam = deriveWinnerFromSets(input.sets);
+  const idempotencyKey = request.headers.get("idempotency-key")?.trim() || undefined;
+  if (idempotencyKey && idempotencyKey.length > 128) {
+    throw new ApiError(400, "Idempotency-Key is too long");
+  }
+  input.idempotencyKey = idempotencyKey;
   return withRatingWriteLock(env.DB, async () => {
+    if (idempotencyKey) {
+      const existingMatchId = await findMatchIdByIdempotencyKey(env.DB, user.id, idempotencyKey);
+      if (existingMatchId) {
+        return formatExistingMatch(env, existingMatchId);
+      }
+    }
+
     const matchId = await createMatch(env.DB, input, winningTeam, user.id);
     await recalculateRatings(env.DB);
     await addAuditLog(env.DB, { actorUserId: user.id, action: "CREATE", entityType: "MATCH", entityId: matchId });
@@ -255,6 +268,14 @@ async function addMatch({ request, env }: RouteContext) {
     }
     return json({ match: await formatMatch(env.DB, match) }, { status: 201 });
   });
+}
+
+async function formatExistingMatch(env: Env, matchId: string) {
+  const match = (await listMatches(env.DB)).find((candidate) => candidate.id === matchId);
+  if (!match) {
+    throw new ApiError(409, "The idempotent match is unavailable");
+  }
+  return json({ match: await formatMatch(env.DB, match) });
 }
 
 async function correctMatch({ request, env, params }: RouteContext) {

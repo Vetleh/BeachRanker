@@ -169,7 +169,14 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
   const isRanked = input.isRanked ?? true;
   const timestamp = nowIso();
 
-  await db.batch([
+  const statements = [
+    ...(input.idempotencyKey
+      ? [
+          db
+            .prepare("INSERT INTO match_idempotency (key, userId, matchId) VALUES (?, ?, ?)")
+            .bind(input.idempotencyKey, enteredByUserId, matchId),
+        ]
+      : []),
     db
       .prepare(
         "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, isRanked, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -189,9 +196,18 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
         timestamp,
       ),
     ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set)),
-  ]);
+  ];
+  await db.batch(statements);
 
   return matchId;
+}
+
+export async function findMatchIdByIdempotencyKey(db: D1Database, userId: string, key: string) {
+  const row = await db
+    .prepare("SELECT matchId FROM match_idempotency WHERE key = ? AND userId = ?")
+    .bind(key, userId)
+    .first<{ matchId: string }>();
+  return row?.matchId ?? null;
 }
 
 export async function updateMatch(db: D1Database, matchId: string, input: MatchInput, winningTeam: "A" | "B") {

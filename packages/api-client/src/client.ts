@@ -117,9 +117,10 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
       const queryString = query.toString();
       return request<{ matches: Match[]; hasMore: boolean }>(`/api/matches${queryString ? `?${queryString}` : ""}`);
     },
-    createMatch: (payload: MatchPayload) =>
+    createMatch: (payload: MatchPayload, idempotencyKey?: string) =>
       request<{ match: Match }>("/api/matches", {
         method: "POST",
+        headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
         body: JSON.stringify(payload),
       }),
     updateMatch: (id: string, payload: MatchPayload) =>

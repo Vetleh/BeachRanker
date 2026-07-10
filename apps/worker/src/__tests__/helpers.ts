@@ -277,6 +277,9 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   if (/FROM login_attempts WHERE key = \?/i.test(sql)) {
     return getTable(tables, "login_attempts").filter((row) => row.key === values[0]);
   }
+  if (/FROM match_idempotency WHERE key = \? AND userId = \?/i.test(sql)) {
+    return getTable(tables, "match_idempotency").filter((row) => row.key === values[0] && row.userId === values[1]);
+  }
   if (/FROM audit_log/i.test(sql)) {
     const users = getTable(tables, "users");
     return [...getTable(tables, "audit_log")]

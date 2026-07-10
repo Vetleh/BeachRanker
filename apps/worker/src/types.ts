@@ -39,6 +39,7 @@ export type MatchInput = {
   sets: MatchSet[];
   isTiebreak?: boolean;
   isRanked?: boolean;
+  idempotencyKey?: string;
 };
 
 export type MatchRow = {
