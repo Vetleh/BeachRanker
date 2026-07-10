@@ -1,7 +1,7 @@
 import {
   deriveWinnerFromSets as deriveDomainWinnerFromSets,
-  findTiedSetNumber,
   hasUniquePlayers,
+  validateMatchSets,
 } from "@beach-ranker/domain/matchRules";
 import { INITIAL_RATING_OPTIONS, PLAYER_GENDERS, type PlayerGender } from "@beach-ranker/domain";
 import { ApiError } from "./http";
@@ -75,8 +75,8 @@ export function parseMatch(input: unknown): MatchInput {
   const teamAPlayerIds = stringArray(body.teamAPlayerIds, "teamAPlayerIds", 2);
   const teamBPlayerIds = stringArray(body.teamBPlayerIds, "teamBPlayerIds", 2);
   const sets = array(body.sets, "sets").map(parseSet);
-  if (sets.length < 1 || sets.length > 3) {
-    throw new ApiError(400, "A match must have one to three sets");
+  if (sets.length < 1) {
+    throw new ApiError(400, "A match must have at least one set");
   }
   return {
     playedAt,
@@ -88,8 +88,9 @@ export function parseMatch(input: unknown): MatchInput {
 }
 
 export function deriveWinnerFromSets(sets: MatchSet[]): TeamSide {
-  if (findTiedSetNumber(sets)) {
-    throw new ApiError(400, "Set scores cannot be tied");
+  const validationError = validateMatchSets(sets);
+  if (validationError) {
+    throw new ApiError(400, validationError);
   }
 
   const winner = deriveDomainWinnerFromSets(sets);

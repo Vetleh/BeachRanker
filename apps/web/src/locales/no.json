@@ -73,9 +73,14 @@
     "addSet": "Legg til sett",
     "removeSet": "Fjern sett",
     "saveMatch": "Lagre kamp",
+    "saveAndAddAnother": "Lagre og legg til en ny",
     "saveCorrection": "Lagre korrigering",
+    "saving": "Lagrer...",
+    "saved": "Kamp lagret. Klar for en ny kamp.",
+    "duplicateWarning": "En kamp med disse fire spillerne finnes allerede på denne datoen.",
     "selectFourUnique": "Velg fire unike spillere.",
     "scoresNeedWinner": "Settscorene må gi en vinner.",
+    "invalidScores": "Skriv inn gyldige resultater: hvert ferdige sett må ha en vinner med minst to poengs margin.",
     "saveFailed": "Kunne ikke lagre kampen"
   },
   "playerSelect": {

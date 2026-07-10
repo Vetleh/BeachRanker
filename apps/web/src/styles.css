@@ -531,6 +531,29 @@ select {
   font-weight: 700;
 }
 
+.form-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #6b4b00;
+  background: #fff4cf;
+  font-weight: 700;
+}
+
+.form-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.secondary-button {
+  min-height: 44px;
+  border-radius: 6px;
+  padding: 0 16px;
+  color: #17211d;
+  background: #edf3eb;
+  font-weight: 800;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 20px, 1180px);

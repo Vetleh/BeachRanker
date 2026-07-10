@@ -706,12 +706,10 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
           />
         </View>
       ))}
-      {sets.length < 3 && (
-        <SecondaryButton
-          label={t("addSet")}
-          onPress={() => setSets((current) => [...current, { teamAPoints: 15, teamBPoints: 12 }])}
-        />
-      )}
+      <SecondaryButton
+        label={t("addSet")}
+        onPress={() => setSets((current) => [...current, { teamAPoints: 15, teamBPoints: 12 }])}
+      />
       {sets.length > 1 && (
         <SecondaryButton label={t("removeSet")} onPress={() => setSets((current) => current.slice(0, -1))} />
       )}

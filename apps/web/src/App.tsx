@@ -6,7 +6,7 @@ import { getActiveTab, useBrowserRoute, type RankingGender, type Tab } from "./r
 import { deriveWinner, formatScore } from "./score";
 import type { Match, Player, PlayerGender, Ranking, Role, User } from "./types";
 import { useAppData } from "./useAppData";
-import { INITIAL_RATING_OPTIONS } from "@beach-ranker/domain";
+import { INITIAL_RATING_OPTIONS, validateMatchSets } from "@beach-ranker/domain";
 import {
   emptySets,
   normalizeSets,
@@ -185,12 +185,15 @@ export function App() {
           ) : (
             <MatchForm
               players={players}
+              existingMatches={matches}
               editingMatch={editingMatch}
               t={t}
               onCancelEdit={() => navigate("/matches")}
-              onSaved={async () => {
+              onSaved={async (stayOnForm) => {
                 await refreshData();
-                navigate("/matches");
+                if (!stayOnForm) {
+                  navigate("/matches");
+                }
               }}
             />
           ))}
@@ -558,16 +561,18 @@ function TeamLine({ label, players, winner }: { label: string; players: Match["t
 
 function MatchForm({
   players,
+  existingMatches,
   editingMatch,
   t,
   onCancelEdit,
   onSaved,
 }: {
   players: Player[];
+  existingMatches: Match[];
   editingMatch: Match | null;
   t: Translator;
   onCancelEdit: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (stayOnForm?: boolean) => Promise<void>;
 }) {
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
   const [playedAt, setPlayedAt] = useState(new Date().toISOString().slice(0, 10));
@@ -575,6 +580,8 @@ function MatchForm({
   const [teamBPlayerIds, setTeamBPlayerIds] = useState<string[]>(["", ""]);
   const [sets, setSets] = useState<EditableMatchSet[]>(emptySets);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!editingMatch) {
@@ -590,7 +597,21 @@ function MatchForm({
   const numericSets = useMemo(() => normalizeSets(sets), [sets]);
   const winner = deriveWinner(numericSets);
   const isTiebreak = sets.length >= 3;
-  const selectedPlayerIds = [...teamAPlayerIds, ...teamBPlayerIds];
+  const selectedPlayerIds = useMemo(() => [...teamAPlayerIds, ...teamBPlayerIds], [teamAPlayerIds, teamBPlayerIds]);
+  const duplicateMatch = useMemo(() => {
+    const selected = new Set(selectedPlayerIds.filter(Boolean));
+    if (selected.size !== 4 || selectedPlayerIds.some((playerId) => !playerId)) {
+      return false;
+    }
+
+    return existingMatches.some((match) => {
+      if (match.id === editingMatch?.id || match.playedAt.slice(0, 10) !== playedAt) {
+        return false;
+      }
+      return new Set([...match.teamA, ...match.teamB].map((player) => player.id)).size === 4 &&
+        [...match.teamA, ...match.teamB].every((player) => selected.has(player.id));
+    });
+  }, [editingMatch?.id, existingMatches, playedAt, selectedPlayerIds]);
 
   function setPlayer(team: "A" | "B", index: number, playerId: string) {
     if (playerId && selectedPlayerIds.includes(playerId)) {
@@ -613,9 +634,9 @@ function MatchForm({
     );
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function save(addAnother: boolean) {
     setError("");
+    setSuccess("");
 
     const selectedPlayers = [...teamAPlayerIds, ...teamBPlayerIds];
     if (new Set(selectedPlayers).size !== 4 || selectedPlayers.some((playerId) => !playerId)) {
@@ -628,6 +649,12 @@ function MatchForm({
       return;
     }
 
+    const scoreError = validateMatchSets(numericSets);
+    if (scoreError) {
+      setError(t("matchForm.invalidScores"));
+      return;
+    }
+
     const payload: MatchPayload = {
       playedAt: new Date(`${playedAt}T12:00:00`).toISOString(),
       teamAPlayerIds,
@@ -636,21 +663,30 @@ function MatchForm({
       isTiebreak,
     };
 
+    setSaving(true);
     try {
       if (editingMatch) {
         await api.updateMatch(editingMatch.id, payload);
       } else {
         await api.createMatch(payload);
       }
-      await onSaved();
-      if (!editingMatch) {
+      if (!editingMatch && addAnother) {
         setTeamAPlayerIds(["", ""]);
         setTeamBPlayerIds(["", ""]);
         setSets(emptySets);
+        setSuccess(t("matchForm.saved"));
       }
+      await onSaved(Boolean(!editingMatch && addAnother));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("matchForm.saveFailed"));
+    } finally {
+      setSaving(false);
     }
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    await save(false);
   }
 
   return (
@@ -727,7 +763,6 @@ function MatchForm({
             <button
               type="button"
               onClick={() => setSets((current) => [...current, { teamAPoints: 15, teamBPoints: 13 }])}
-              disabled={sets.length >= 3}
             >
               {t("matchForm.addSet")}
             </button>
@@ -740,10 +775,19 @@ function MatchForm({
             </button>
           </div>
         </div>
+        {duplicateMatch && <p className="form-warning">{t("matchForm.duplicateWarning")}</p>}
         {error && <p className="form-error">{error}</p>}
-        <button className="primary-button" type="submit">
-          {editingMatch ? t("matchForm.saveCorrection") : t("matchForm.saveMatch")}
-        </button>
+        {success && <p className="form-success">{success}</p>}
+        <div className="form-actions">
+          <button className="primary-button" type="submit" disabled={saving}>
+            {saving ? t("matchForm.saving") : editingMatch ? t("matchForm.saveCorrection") : t("matchForm.saveMatch")}
+          </button>
+          {!editingMatch && (
+            <button className="secondary-button" type="button" disabled={saving} onClick={() => void save(true)}>
+              {t("matchForm.saveAndAddAnother")}
+            </button>
+          )}
+        </div>
       </form>
     </section>
   );

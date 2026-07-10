@@ -5,6 +5,26 @@ export type MatchSetScore = {
   teamBPoints: number;
 };
 
+export function validateMatchSets(sets: MatchSetScore[]): string | null {
+  if (sets.length === 0) {
+    return "A match must contain at least one set.";
+  }
+
+  for (const [index, set] of sets.entries()) {
+    const high = Math.max(set.teamAPoints, set.teamBPoints);
+    const low = Math.min(set.teamAPoints, set.teamBPoints);
+
+    if (!Number.isInteger(set.teamAPoints) || !Number.isInteger(set.teamBPoints) || low < 0) {
+      return `Set ${index + 1} must contain whole, non-negative scores.`;
+    }
+    if (set.teamAPoints === set.teamBPoints || high - low < 2) {
+      return `Set ${index + 1} must have a winner by at least two points.`;
+    }
+  }
+
+  return null;
+}
+
 export function deriveWinnerFromSets(sets: MatchSetScore[]): TeamSide | null {
   let teamAWins = 0;
   let teamBWins = 0;
