@@ -7,6 +7,11 @@ on:
     branches:
       - main
 
+# Keep the default GitHub token read-only. This workflow authenticates to
+# Cloudflare with an explicit secret and does not need repository write access.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
