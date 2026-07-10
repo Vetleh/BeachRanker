@@ -20,7 +20,8 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
   const timeoutMs = options.timeoutMs ?? 10000;
 
   async function request<T>(path: string, requestOptions: RequestInit = {}): Promise<T> {
-    const controller = requestOptions.signal ? null : new AbortController();
+    const controller = new AbortController();
+    const removeExternalAbortListener = forwardAbort(requestOptions.signal, controller);
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
     const operation = async () => {
@@ -35,7 +36,7 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
         ...requestOptions,
         credentials: options.credentials,
         headers,
-        signal: requestOptions.signal ?? controller?.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -59,7 +60,7 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
         operation(),
         new Promise<T>((_, reject) => {
           timeout = setTimeout(() => {
-            controller?.abort();
+            controller.abort();
             reject(new Error("Request timed out"));
           }, timeoutMs);
         }),
@@ -68,6 +69,7 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
       if (timeout) {
         clearTimeout(timeout);
       }
+      removeExternalAbortListener();
     }
   }
 
@@ -123,4 +125,17 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
       }),
     deleteMatch: (id: string) => request<void>(`/api/matches/${encodeURIComponent(id)}`, { method: "DELETE" }),
   };
+}
+
+function forwardAbort(signal: AbortSignal | null | undefined, controller: AbortController) {
+  if (!signal) {
+    return () => undefined;
+  }
+  if (signal.aborted) {
+    controller.abort(signal.reason);
+    return () => undefined;
+  }
+  const abort = () => controller.abort(signal.reason);
+  signal.addEventListener("abort", abort, { once: true });
+  return () => signal.removeEventListener("abort", abort);
 }
