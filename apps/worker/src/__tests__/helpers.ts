@@ -287,7 +287,8 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
     return [{ count: getTable(tables, "players").filter((row) => row.active === 1 && ids.includes(row.id)).length }];
   }
   if (/FROM matches/i.test(sql)) {
-    return hydrateMatches(tables, values[0]);
+    const playerId = /\? IN \(/i.test(sql) ? values[0] : undefined;
+    return hydrateMatches(tables, playerId);
   }
   if (/FROM rating_snapshots WHERE matchId = \?/i.test(sql)) {
     return getTable(tables, "rating_snapshots").filter((row) => row.matchId === values[0]);

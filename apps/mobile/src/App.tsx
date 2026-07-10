@@ -55,8 +55,10 @@ type DataState = {
   players: Player[];
   rankings: Ranking[];
   matches: Match[];
+  matchesHasMore: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
+  loadMoreMatches: () => Promise<void>;
 };
 
 type LocaleState = {
@@ -362,6 +364,7 @@ function AppDataProvider({ children }: { children: ReactNode }) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [matchesHasMore, setMatchesHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -383,8 +386,9 @@ function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const matchesResult = await api.matches();
+      const matchesResult = await api.matches(undefined, { limit: 200, offset: 0 });
       setMatches(matchesResult.matches);
+      setMatchesHasMore(matchesResult.hasMore);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : t("requestFailed"));
     }
@@ -395,6 +399,12 @@ function AppDataProvider({ children }: { children: ReactNode }) {
     }
   }, [api, t]);
 
+  const loadMoreMatches = useCallback(async () => {
+    const result = await api.matches(undefined, { limit: 200, offset: matches.length });
+    setMatches((current) => [...current, ...result.matches]);
+    setMatchesHasMore(result.hasMore);
+  }, [api, matches.length]);
+
   useEffect(() => {
     refresh().catch((error: Error) => {
       setLoading(false);
@@ -403,7 +413,9 @@ function AppDataProvider({ children }: { children: ReactNode }) {
   }, [refresh, t]);
 
   return (
-    <DataContext.Provider value={{ players, rankings, matches, loading, refresh }}>{children}</DataContext.Provider>
+    <DataContext.Provider value={{ players, rankings, matches, matchesHasMore, loading, refresh, loadMoreMatches }}>
+      {children}
+    </DataContext.Provider>
   );
 }
 
@@ -560,12 +572,14 @@ function MatchesNavigator() {
 
 function MatchesScreen({ navigation }: NativeStackScreenProps<MatchesStackParamList, "MatchesHome">) {
   const { user, api } = useAuthContext();
-  const { matches, refresh } = useDataContext();
+  const { matches, matchesHasMore, loadMoreMatches, refresh } = useDataContext();
 
   return (
     <Screen scroll={false}>
       <MatchList
         matches={matches}
+        hasMore={matchesHasMore}
+        onLoadMore={loadMoreMatches}
         canEdit={user?.role === "ADMIN"}
         onEdit={(match) => navigation.navigate("MatchEditor", { matchId: match.id })}
         onDelete={async (match) => {
@@ -880,11 +894,15 @@ function MatchList({
   canEdit = false,
   onEdit,
   onDelete,
+  hasMore = false,
+  onLoadMore,
 }: {
   matches: Match[];
   canEdit?: boolean;
   onEdit?: (match: Match) => void;
   onDelete?: (match: Match) => Promise<void>;
+  hasMore?: boolean;
+  onLoadMore?: () => Promise<void>;
 }) {
   const { t, dateLocale } = useLocaleContext();
   if (matches.length === 0) {
@@ -923,6 +941,7 @@ function MatchList({
           )}
         </View>
       )}
+      ListFooterComponent={hasMore && onLoadMore ? <SecondaryButton label={t("loadMore")} onPress={onLoadMore} /> : null}
     />
   );
 }

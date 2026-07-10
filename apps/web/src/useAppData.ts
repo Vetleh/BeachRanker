@@ -7,6 +7,7 @@ export function useAppData(onError: (message: string) => void) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [matchesHasMore, setMatchesHasMore] = useState(false);
   const [profileMatches, setProfileMatches] = useState<Match[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -15,13 +16,20 @@ export function useAppData(onError: (message: string) => void) {
     const [playersResult, rankingsResult, matchesResult] = await Promise.all([
       api.players(),
       api.rankings(),
-      api.matches(),
+      api.matches(undefined, { limit: 200, offset: 0 }),
     ]);
 
     setPlayers(playersResult.players);
     setRankings(rankingsResult.rankings);
     setMatches(matchesResult.matches);
+    setMatchesHasMore(matchesResult.hasMore);
   }, []);
+
+  const loadMoreMatches = useCallback(async () => {
+    const result = await api.matches(undefined, { limit: 200, offset: matches.length });
+    setMatches((current) => [...current, ...result.matches]);
+    setMatchesHasMore(result.hasMore);
+  }, [matches.length]);
 
   useEffect(() => {
     let current = true;
@@ -62,6 +70,7 @@ export function useAppData(onError: (message: string) => void) {
     setPlayers([]);
     setRankings([]);
     setMatches([]);
+    setMatchesHasMore(false);
     setProfileMatches([]);
   }, []);
 
@@ -103,6 +112,8 @@ export function useAppData(onError: (message: string) => void) {
     players,
     rankings,
     matches,
+    matchesHasMore,
+    loadMoreMatches,
     profileMatches,
     profileLoading,
     refreshData,

@@ -249,7 +249,7 @@ export async function listAuditLog(db: D1Database) {
   return results;
 }
 
-export async function listMatches(db: D1Database, playerId?: string) {
+export async function listMatches(db: D1Database, playerId?: string, page?: { limit: number; offset: number }) {
   const playerFilter = playerId
     ? `WHERE ? IN (
         m.teamAPlayer1Id,
@@ -258,6 +258,7 @@ export async function listMatches(db: D1Database, playerId?: string) {
         m.teamBPlayer2Id
       )`
     : "";
+  const pagination = page ? " LIMIT ? OFFSET ?" : "";
   const statement = db.prepare(
     `SELECT
         m.id,
@@ -286,9 +287,18 @@ export async function listMatches(db: D1Database, playerId?: string) {
       JOIN players p4 ON p4.id = m.teamBPlayer2Id
       JOIN users u ON u.id = m.enteredByUserId
       ${playerFilter}
-      ORDER BY m.playedAt DESC, m.createdAt DESC`,
+      ORDER BY m.playedAt DESC, m.createdAt DESC${pagination}`,
   );
-  const { results } = playerId ? await statement.bind(playerId).all<MatchRow>() : await statement.all<MatchRow>();
+  const bindValues = page
+    ? playerId
+      ? [playerId, page.limit, page.offset]
+      : [page.limit, page.offset]
+    : playerId
+      ? [playerId]
+      : [];
+  const { results } = bindValues.length > 0
+    ? await statement.bind(...bindValues).all<MatchRow>()
+    : await statement.all<MatchRow>();
   return results;
 }
 

@@ -55,7 +55,7 @@ describe("match player selection", () => {
     });
     vi.mocked(api.players).mockResolvedValue({ players });
     vi.mocked(api.rankings).mockResolvedValue({ rankings: [] });
-    vi.mocked(api.matches).mockResolvedValue({ matches: [] });
+    vi.mocked(api.matches).mockResolvedValue({ matches: [], hasMore: false });
   });
 
   it("searches player select options and blocks already selected players across teams", async () => {

@@ -30,6 +30,8 @@ export function App() {
     players,
     rankings,
     matches,
+    matchesHasMore,
+    loadMoreMatches,
     profileMatches,
     profileLoading,
     refreshData,
@@ -161,6 +163,8 @@ export function App() {
               await api.deleteMatch(matchId);
               await refreshData();
             }}
+            hasMore={matchesHasMore}
+            onLoadMore={loadMoreMatches}
           />
         )}
         {route.name === "player" &&
@@ -459,6 +463,8 @@ function MatchesView({
   t,
   onEdit,
   onDelete,
+  hasMore,
+  onLoadMore,
 }: {
   matches: Match[];
   title?: string;
@@ -467,6 +473,8 @@ function MatchesView({
   t: Translator;
   onEdit: (match: Match) => void;
   onDelete: (matchId: string) => Promise<void>;
+  hasMore?: boolean;
+  onLoadMore?: () => Promise<void>;
 }) {
   const [busyMatchId, setBusyMatchId] = useState("");
   const [search, setSearch] = useState("");
@@ -560,6 +568,11 @@ function MatchesView({
           </div>
         </article>
       ))}
+      {hasMore && onLoadMore && (
+        <button type="button" onClick={() => void onLoadMore()}>
+          {t("matches.loadMore")}
+        </button>
+      )}
     </section>
   );
 }

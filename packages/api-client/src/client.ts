@@ -109,9 +109,13 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
         body: JSON.stringify({ password }),
       }),
     rankings: () => request<{ rankings: Ranking[] }>("/api/rankings"),
-    matches: (playerId?: string) => {
-      const query = playerId ? `?playerId=${encodeURIComponent(playerId)}` : "";
-      return request<{ matches: Match[] }>(`/api/matches${query}`);
+    matches: (playerId?: string, page?: { limit?: number; offset?: number }) => {
+      const query = new URLSearchParams();
+      if (playerId) query.set("playerId", playerId);
+      if (page?.limit !== undefined) query.set("limit", String(page.limit));
+      if (page?.offset !== undefined) query.set("offset", String(page.offset));
+      const queryString = query.toString();
+      return request<{ matches: Match[]; hasMore: boolean }>(`/api/matches${queryString ? `?${queryString}` : ""}`);
     },
     createMatch: (payload: MatchPayload) =>
       request<{ match: Match }>("/api/matches", {

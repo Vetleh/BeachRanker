@@ -169,14 +169,20 @@ function formatMatchData(match: MatchRow, sets: MatchSetRow[], snapshots: Rating
   };
 }
 
-export async function getMatches(db: D1Database) {
-  const matches = await listMatches(db);
-  return formatMatches(db, matches);
+export async function getMatches(db: D1Database, page: { limit: number; offset: number }) {
+  const rows = await listMatches(db, undefined, { limit: page.limit + 1, offset: page.offset });
+  return {
+    matches: await formatMatches(db, rows.slice(0, page.limit)),
+    hasMore: rows.length > page.limit,
+  };
 }
 
-export async function getMatchesForPlayer(db: D1Database, playerId: string) {
-  const matches = await listMatches(db, playerId);
-  return formatMatches(db, matches);
+export async function getMatchesForPlayer(db: D1Database, playerId: string, page: { limit: number; offset: number }) {
+  const rows = await listMatches(db, playerId, { limit: page.limit + 1, offset: page.offset });
+  return {
+    matches: await formatMatches(db, rows.slice(0, page.limit)),
+    hasMore: rows.length > page.limit,
+  };
 }
 
 function formatMatchPlayer(player: { id: string; name: string; deltaFor: RatingSnapshot[] }) {

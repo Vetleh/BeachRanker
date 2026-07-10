@@ -189,22 +189,54 @@ async function matches({ request, env }: RouteContext) {
   const user = requireAuth(await getAuthUser(request, env));
   const url = new URL(request.url);
   const requestedPlayerId = url.searchParams.get("playerId");
+  const page = parseMatchPage(url);
 
   if (requestedPlayerId) {
-    return json({ matches: await getMatchesForPlayer(env.DB, requestedPlayerId) });
+    return json(await getMatchesForPlayer(env.DB, requestedPlayerId, page));
   }
 
   const player = await findPlayerByUserId(env.DB, user.id);
 
   if (user.role === "ADMIN" && (!player || player.active !== 1)) {
-    return json({ matches: await getMatches(env.DB) });
+    return json(await getMatches(env.DB, page));
   }
 
   if (!player || player.active !== 1) {
-    return json({ matches: [] });
+    return json({ matches: [], hasMore: false });
   }
 
-  return json({ matches: await getMatchesForPlayer(env.DB, player.id) });
+  return json(await getMatchesForPlayer(env.DB, player.id, page));
+}
+
+function parseMatchPage(url: URL) {
+  const limit = parsePositiveInteger(url.searchParams.get("limit"), 200);
+  const offset = parseNonNegativeInteger(url.searchParams.get("offset"), 0);
+  if (limit > 200) {
+    throw new ApiError(400, "limit cannot exceed 200");
+  }
+  return { limit, offset };
+}
+
+function parsePositiveInteger(value: string | null, fallback: number) {
+  if (value === null) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new ApiError(400, "limit must be a positive integer");
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(value: string | null, fallback: number) {
+  if (value === null) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new ApiError(400, "offset must be a non-negative integer");
+  }
+  return parsed;
 }
 
 async function addMatch({ request, env }: RouteContext) {

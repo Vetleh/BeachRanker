@@ -43,6 +43,7 @@
     "empty": "No matches found.",
     "tiebreak": "Tiebreak",
     "unrated": "Unrated",
+    "loadMore": "Load more",
     "enteredBy": "Entered by {name}",
     "edit": "Edit",
     "delete": "Delete",
