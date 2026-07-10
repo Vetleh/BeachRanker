@@ -147,6 +147,10 @@ export async function updateUserPassword(db: D1Database, userId: string, passwor
     .first<User>();
 }
 
+export async function revokeUserSessions(db: D1Database, userId: string) {
+  await db.prepare("UPDATE users SET sessionVersion = sessionVersion + 1, updatedAt = ? WHERE id = ?").bind(nowIso(), userId).run();
+}
+
 export async function countActivePlayers(db: D1Database, playerIds: string[]) {
   const placeholders = playerIds.map(() => "?").join(", ");
   const row = await db

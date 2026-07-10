@@ -220,6 +220,16 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
+  const revokeUserSessions = sql.match(/^UPDATE users SET sessionVersion = sessionVersion \+ 1/i);
+  if (revokeUserSessions) {
+    const user = getTable(tables, "users").find((row) => row.id === values[1]);
+    if (user) {
+      user.sessionVersion = Number(user.sessionVersion ?? 0) + 1;
+      user.updatedAt = values[0];
+    }
+    return;
+  }
+
   const updatePlayerUser = sql.match(/^UPDATE players SET userId = \?, updatedAt = \? WHERE id = \?(?: AND userId IS NULL)?/i);
   if (updatePlayerUser) {
     const player = getTable(tables, "players").find((row) => row.id === values[2]);

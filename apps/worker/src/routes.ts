@@ -23,6 +23,7 @@ import {
   updateMatch,
   addAuditLog,
   listAuditLog,
+  revokeUserSessions,
 } from "./db";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson, requireString } from "./http";
@@ -109,7 +110,11 @@ async function login({ request, env }: RouteContext) {
   return json({ user: responseUser }, { headers: { "set-cookie": await createSessionCookie(env, user.id) } });
 }
 
-async function logout() {
+async function logout({ request, env }: RouteContext) {
+  const user = await getAuthUser(request, env);
+  if (user) {
+    await revokeUserSessions(env.DB, user.id);
+  }
   return noContent({ headers: { "set-cookie": clearSessionCookie() } });
 }
 
