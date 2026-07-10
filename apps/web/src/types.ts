@@ -7,5 +7,5 @@ export type {
   Ranking,
   Role,
   TeamSide,
-  User
+  User,
 } from "@beach-ranker/api-client";

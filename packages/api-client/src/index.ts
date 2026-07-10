@@ -11,5 +11,5 @@ export type {
   Ranking,
   Role,
   TeamSide,
-  User
+  User,
 } from "./types.js";

@@ -6,7 +6,7 @@ import {
   hashPassword,
   requireAdmin,
   requireAuth,
-  verifyPassword
+  verifyPassword,
 } from "./auth";
 import {
   countActivePlayers,
@@ -20,7 +20,7 @@ import {
   listPlayers,
   updatePlayer,
   updateUserPassword,
-  updateMatch
+  updateMatch,
 } from "./db";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson, requireString } from "./http";
@@ -34,7 +34,7 @@ import {
   parsePlayer,
   parsePlayerPatch,
   parseUserCreate,
-  validateUniquePlayers
+  validateUniquePlayers,
 } from "./validation";
 
 type RouteContext = {
@@ -46,6 +46,7 @@ type RouteContext = {
 type Handler = (context: RouteContext) => Promise<Response>;
 
 const routes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
+  { method: "GET", pattern: /^\/api\/health$/, handler: health },
   { method: "POST", pattern: /^\/api\/auth\/login$/, handler: login },
   { method: "POST", pattern: /^\/api\/auth\/logout$/, handler: logout },
   { method: "GET", pattern: /^\/api\/auth\/me$/, handler: me },
@@ -58,8 +59,13 @@ const routes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: "GET", pattern: /^\/api\/matches$/, handler: matches },
   { method: "POST", pattern: /^\/api\/matches$/, handler: addMatch },
   { method: "PATCH", pattern: /^\/api\/matches\/(?<id>[^/]+)$/, handler: correctMatch },
-  { method: "DELETE", pattern: /^\/api\/matches\/(?<id>[^/]+)$/, handler: removeMatch }
+  { method: "DELETE", pattern: /^\/api\/matches\/(?<id>[^/]+)$/, handler: removeMatch },
 ];
+
+async function health({ env }: RouteContext) {
+  await env.DB.prepare("SELECT id, name, active, initialRating, gender, userId FROM players ORDER BY name ASC").all();
+  return json({ status: "ok" });
+}
 
 export async function handleApi(request: Request, env: Env) {
   const url = new URL(request.url);
@@ -89,17 +95,14 @@ async function login({ request, env }: RouteContext) {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
-    role: user.role
+    role: user.role,
   };
 
   if (input.authMode === "bearer") {
     return json({ user: responseUser, token: await createSessionToken(env, user.id) });
   }
 
-  return json(
-    { user: responseUser },
-    { headers: { "set-cookie": await createSessionCookie(env, user.id) } }
-  );
+  return json({ user: responseUser }, { headers: { "set-cookie": await createSessionCookie(env, user.id) } });
 }
 
 async function logout() {
@@ -138,7 +141,7 @@ async function addUser({ request, env }: RouteContext) {
     displayName: input.displayName,
     passwordHash: await hashPassword(input.password),
     role: input.role,
-    playerId: input.playerId
+    playerId: input.playerId,
   });
   return json({ user }, { status: 201 });
 }
@@ -156,8 +159,8 @@ async function resetPassword({ request, env, params }: RouteContext) {
       email: user.email,
       displayName: user.displayName,
       role: user.role,
-      active: user.active === 1
-    }
+      active: user.active === 1,
+    },
   });
 }
 

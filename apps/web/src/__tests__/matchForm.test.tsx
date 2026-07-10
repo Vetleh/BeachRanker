@@ -12,15 +12,15 @@ vi.mock("../api", () => ({
     createMatch: vi.fn(),
     updateMatch: vi.fn(),
     deleteMatch: vi.fn(),
-    logout: vi.fn()
-  }
+    logout: vi.fn(),
+  },
 }));
 
 const players = [
   { id: "alice", name: "Alice Anders", active: true, initialRating: 1500, gender: "WOMEN" as const },
   { id: "bob", name: "Bob Berg", active: true, initialRating: 1500, gender: "MEN" as const },
   { id: "cara", name: "Cara Coast", active: true, initialRating: 1500, gender: "WOMEN" as const },
-  { id: "dan", name: "Dan Dune", active: true, initialRating: 1500, gender: "MEN" as const }
+  { id: "dan", name: "Dan Dune", active: true, initialRating: 1500, gender: "MEN" as const },
 ];
 
 function choosePlayer(label: string, playerName: string) {
@@ -40,8 +40,8 @@ describe("match player selection", () => {
         getItem: vi.fn((key: string) => storage.get(key) ?? null),
         setItem: vi.fn((key: string, value: string) => storage.set(key, value)),
         removeItem: vi.fn((key: string) => storage.delete(key)),
-        clear: vi.fn(() => storage.clear())
-      }
+        clear: vi.fn(() => storage.clear()),
+      },
     });
     window.localStorage.setItem("beachranker-language", "en");
     vi.mocked(api.me).mockResolvedValue({
@@ -50,8 +50,8 @@ describe("match player selection", () => {
         email: "admin@example.com",
         displayName: "Admin",
         role: "ADMIN",
-        active: true
-      }
+        active: true,
+      },
     });
     vi.mocked(api.players).mockResolvedValue({ players });
     vi.mocked(api.rankings).mockResolvedValue({ rankings: [] });
@@ -77,7 +77,7 @@ describe("match player selection", () => {
     const teamBListbox = screen.getByRole("listbox", { name: "Team B player 1 options" });
     expect(within(teamBListbox).getByRole("option", { name: "Alice Anders Already selected" })).toHaveAttribute(
       "aria-disabled",
-      "true"
+      "true",
     );
 
     fireEvent.mouseDown(within(teamBListbox).getByRole("option", { name: "Alice Anders Already selected" }));
@@ -133,8 +133,8 @@ describe("match player selection", () => {
       sets: [
         { teamAPoints: 21, teamBPoints: 18 },
         { teamAPoints: 21, teamBPoints: 18 },
-        { teamAPoints: 15, teamBPoints: 13 }
-      ]
+        { teamAPoints: 15, teamBPoints: 13 },
+      ],
     });
   });
 

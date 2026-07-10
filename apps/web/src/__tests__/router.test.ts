@@ -16,12 +16,12 @@ describe("router", () => {
     expect(parseRoute("/matches/match-1/edit")).toEqual({
       name: "editMatch",
       path: "/matches/match-1/edit",
-      matchId: "match-1"
+      matchId: "match-1",
     });
     expect(parseRoute("/players/alice%20id")).toEqual({
       name: "player",
       path: "/players/alice%20id",
-      playerId: "alice id"
+      playerId: "alice id",
     });
   });
 

@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
 import {
   createBeachRankerApi,
@@ -24,26 +24,22 @@ import {
   type PlayerGender,
   type Ranking,
   type Role,
-  type User
+  type User,
 } from "@beach-ranker/api-client";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { INITIAL_RATING_OPTIONS } from "@beach-ranker/domain";
 import { languageOptions, translate, type Language, type TranslationKey } from "./i18n";
+import {
+  emptySets,
+  normalizeSets,
+  parseEditableScore,
+  type EditableMatchSet,
+  type ScoreField,
+} from "./features/matches/model";
 
 const tokenKey = "beachranker_session";
 const languageKey = "beachranker_language";
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? "";
-const ratingOptions = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000];
-const emptySets: MatchSet[] = [
-  { teamAPoints: 21, teamBPoints: 18 },
-  { teamAPoints: 21, teamBPoints: 18 }
-];
-
-type EditableScore = number | "";
-type ScoreField = "teamAPoints" | "teamBPoints";
-type EditableMatchSet = {
-  teamAPoints: EditableScore;
-  teamBPoints: EditableScore;
-};
 
 type AuthState = {
   user: User | null;
@@ -139,15 +135,50 @@ export default function App() {
         <AuthContext.Provider value={auth}>
           <AppDataProvider>
             <NavigationContainer>
-            <Tabs.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.green }}>
-              <Tabs.Screen name="Rankings" component={RankingsNavigator} options={{ title: locale.t("rankings"), tabBarIcon: ({ color, size }) => <TabIcon name="rankings" color={color} size={size} /> }} />
-              <Tabs.Screen name="Matches" component={MatchesNavigator} options={{ title: locale.t("matches"), tabBarIcon: ({ color, size }) => <TabIcon name="matches" color={color} size={size} /> }} />
-              <Tabs.Screen name="Add" component={AddNavigator} options={{ title: locale.t("add"), tabBarIcon: ({ color, size }) => <TabIcon name="add" color={color} size={size} /> }} />
-              <Tabs.Screen name="Profile" component={ProfileNavigator} options={{ title: locale.t("profile"), tabBarIcon: ({ color, size }) => <TabIcon name="profile" color={color} size={size} /> }} />
-              {auth.user.role === "ADMIN" && (
-                <Tabs.Screen name="Admin" component={AdminNavigator} options={{ title: locale.t("admin"), tabBarIcon: ({ color, size }) => <TabIcon name="admin" color={color} size={size} /> }} />
-              )}
-            </Tabs.Navigator>
+              <Tabs.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.green }}>
+                <Tabs.Screen
+                  name="Rankings"
+                  component={RankingsNavigator}
+                  options={{
+                    title: locale.t("rankings"),
+                    tabBarIcon: ({ color, size }) => <TabIcon name="rankings" color={color} size={size} />,
+                  }}
+                />
+                <Tabs.Screen
+                  name="Matches"
+                  component={MatchesNavigator}
+                  options={{
+                    title: locale.t("matches"),
+                    tabBarIcon: ({ color, size }) => <TabIcon name="matches" color={color} size={size} />,
+                  }}
+                />
+                <Tabs.Screen
+                  name="Add"
+                  component={AddNavigator}
+                  options={{
+                    title: locale.t("add"),
+                    tabBarIcon: ({ color, size }) => <TabIcon name="add" color={color} size={size} />,
+                  }}
+                />
+                <Tabs.Screen
+                  name="Profile"
+                  component={ProfileNavigator}
+                  options={{
+                    title: locale.t("profile"),
+                    tabBarIcon: ({ color, size }) => <TabIcon name="profile" color={color} size={size} />,
+                  }}
+                />
+                {auth.user.role === "ADMIN" && (
+                  <Tabs.Screen
+                    name="Admin"
+                    component={AdminNavigator}
+                    options={{
+                      title: locale.t("admin"),
+                      tabBarIcon: ({ color, size }) => <TabIcon name="admin" color={color} size={size} />,
+                    }}
+                  />
+                )}
+              </Tabs.Navigator>
             </NavigationContainer>
           </AppDataProvider>
         </AuthContext.Provider>
@@ -180,7 +211,15 @@ function useLocaleContext() {
   return value;
 }
 
-function TabIcon({ name, color, size }: { name: "rankings" | "matches" | "add" | "profile" | "admin"; color: string; size: number }) {
+function TabIcon({
+  name,
+  color,
+  size,
+}: {
+  name: "rankings" | "matches" | "add" | "profile" | "admin";
+  color: string;
+  size: number;
+}) {
   if (name === "rankings") {
     return (
       <View style={[styles.tabIcon, { width: size, height: size }]}>
@@ -248,9 +287,9 @@ function useAuth(): AuthState {
           } else {
             await SecureStore.deleteItemAsync(tokenKey);
           }
-        }
+        },
       }),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -280,7 +319,7 @@ function useAuth(): AuthState {
       } finally {
         setUser(null);
       }
-    }
+    },
   };
 }
 
@@ -310,9 +349,9 @@ function useLocale(): LocaleState {
       language,
       dateLocale: selectedOption.dateLocale,
       t: (key: TranslationKey) => translate(language, key),
-      setLanguage
+      setLanguage,
     }),
-    [language, selectedOption.dateLocale, setLanguage]
+    [language, selectedOption.dateLocale, setLanguage],
   );
 }
 
@@ -360,9 +399,11 @@ function AppDataProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       Alert.alert(t("requestFailed"), error.message);
     });
-  }, [refresh]);
+  }, [refresh, t]);
 
-  return <DataContext.Provider value={{ players, rankings, matches, loading, refresh }}>{children}</DataContext.Provider>;
+  return (
+    <DataContext.Provider value={{ players, rankings, matches, loading, refresh }}>{children}</DataContext.Provider>
+  );
 }
 
 function LoginScreen({ auth }: { auth: AuthState }) {
@@ -387,10 +428,31 @@ function LoginScreen({ auth }: { auth: AuthState }) {
       <Text style={styles.brand}>BeachRanker</Text>
       <Text style={styles.subtitle}>{t("tagline")}</Text>
       <LanguageDropdown compact />
-      <TextInput style={styles.input} autoCapitalize="none" keyboardType="email-address" placeholder={t("email")} value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder={t("password")} secureTextEntry value={password} onChangeText={setPassword} />
-      <PrimaryButton label={busy ? t("signingIn") : t("signIn")} disabled={busy || !email || !password} onPress={submit} />
-      {auth.startupError && <Text style={styles.help}>{t("startupCheckFailed")} {auth.startupError}</Text>}
+      <TextInput
+        style={styles.input}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        placeholder={t("email")}
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={t("password")}
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <PrimaryButton
+        label={busy ? t("signingIn") : t("signIn")}
+        disabled={busy || !email || !password}
+        onPress={submit}
+      />
+      {auth.startupError && (
+        <Text style={styles.help}>
+          {t("startupCheckFailed")} {auth.startupError}
+        </Text>
+      )}
       {!apiBaseUrl && <Text style={styles.help}>{t("apiHint")}</Text>}
       {apiBaseUrl && <Text style={styles.help}>API: {apiBaseUrl}</Text>}
     </View>
@@ -401,7 +463,12 @@ function RankingsNavigator() {
   const { t } = useLocaleContext();
   return (
     <RankingsStack.Navigator>
-      <RankingsStack.Screen name="RankingsHome" component={RankingsScreen} initialParams={{ gender: "MEN" }} options={{ title: t("rankings") }} />
+      <RankingsStack.Screen
+        name="RankingsHome"
+        component={RankingsScreen}
+        initialParams={{ gender: "MEN" }}
+        options={{ title: t("rankings") }}
+      />
       <RankingsStack.Screen name="PlayerProfile" component={PlayerProfileScreen} options={{ title: t("player") }} />
     </RankingsStack.Navigator>
   );
@@ -423,7 +490,7 @@ function RankingsScreen({ route, navigation }: NativeStackScreenProps<RankingsSt
         value={gender}
         options={[
           { label: t("men"), value: "MEN" },
-          { label: t("women"), value: "WOMEN" }
+          { label: t("women"), value: "WOMEN" },
         ]}
         onChange={(next) => navigation.setParams({ gender: next })}
       />
@@ -436,7 +503,9 @@ function RankingsScreen({ route, navigation }: NativeStackScreenProps<RankingsSt
             <Text style={styles.rank}>#{item.rank}</Text>
             <View style={styles.rowMain}>
               <Text style={styles.rowTitle}>{item.name}</Text>
-              <Text style={styles.rowMeta}>{item.wins}-{item.losses} · {item.matchesPlayed} {t("played")}</Text>
+              <Text style={styles.rowMeta}>
+                {item.wins}-{item.losses} · {item.matchesPlayed} {t("played")}
+              </Text>
             </View>
             <Text style={styles.rating}>{item.rating}</Text>
           </Pressable>
@@ -469,7 +538,10 @@ function PlayerProfileScreen({ route }: NativeStackScreenProps<RankingsStackPara
 
   return (
     <Screen scroll={false}>
-      <ScreenHeader title={player.name} subtitle={`#${player.rank} · ${player.rating} Elo · ${player.wins}-${player.losses}`} />
+      <ScreenHeader
+        title={player.name}
+        subtitle={`#${player.rank} · ${player.rating} Elo · ${player.wins}-${player.losses}`}
+      />
       {loading ? <Centered label={t("loadingMatches")} /> : <MatchList matches={matches} />}
     </Screen>
   );
@@ -522,30 +594,18 @@ function MatchEditorScreen({ route }: NativeStackScreenProps<MatchesStackParamLi
   return <MatchForm editingMatch={matches.find((match) => match.id === route.params.matchId)} />;
 }
 
-function parseEditableScore(value: string): EditableScore {
-  if (value === "") {
-    return "";
-  }
-
-  const score = Number(value);
-  return Number.isFinite(score) ? score : "";
-}
-
-function normalizeSets(sets: EditableMatchSet[]): MatchSet[] {
-  return sets.map((set) => ({
-    teamAPoints: set.teamAPoints === "" ? 0 : set.teamAPoints,
-    teamBPoints: set.teamBPoints === "" ? 0 : set.teamBPoints
-  }));
-}
-
 function MatchForm({ editingMatch }: { editingMatch?: Match }) {
   const { api } = useAuthContext();
   const { players, refresh } = useDataContext();
   const { t } = useLocaleContext();
   const navigation = useNavigation();
   const [playedAt, setPlayedAt] = useState(() => dateFromPlayedAt(editingMatch?.playedAt));
-  const [teamAPlayerIds, setTeamAPlayerIds] = useState(() => editingMatch?.teamA.map((player) => player.id) ?? ["", ""]);
-  const [teamBPlayerIds, setTeamBPlayerIds] = useState(() => editingMatch?.teamB.map((player) => player.id) ?? ["", ""]);
+  const [teamAPlayerIds, setTeamAPlayerIds] = useState(
+    () => editingMatch?.teamA.map((player) => player.id) ?? ["", ""],
+  );
+  const [teamBPlayerIds, setTeamBPlayerIds] = useState(
+    () => editingMatch?.teamB.map((player) => player.id) ?? ["", ""],
+  );
   const [sets, setSets] = useState<EditableMatchSet[]>(() => editingMatch?.sets ?? emptySets);
   const [busy, setBusy] = useState(false);
   const activePlayers = players.filter((player) => player.active);
@@ -557,12 +617,14 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
   }
 
   function setSet(index: number, key: ScoreField, value: string) {
-    setSets((current) => current.map((set, currentIndex) => (currentIndex === index ? { ...set, [key]: parseEditableScore(value) } : set)));
+    setSets((current) =>
+      current.map((set, currentIndex) => (currentIndex === index ? { ...set, [key]: parseEditableScore(value) } : set)),
+    );
   }
 
   function commitSet(index: number, key: ScoreField) {
     setSets((current) =>
-      current.map((set, currentIndex) => (currentIndex === index && set[key] === "" ? { ...set, [key]: 0 } : set))
+      current.map((set, currentIndex) => (currentIndex === index && set[key] === "" ? { ...set, [key]: 0 } : set)),
     );
   }
 
@@ -577,7 +639,7 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
       teamAPlayerIds,
       teamBPlayerIds,
       sets: numericSets,
-      isTiebreak: sets.length >= 3
+      isTiebreak: sets.length >= 3,
     };
     setBusy(true);
     try {
@@ -606,21 +668,58 @@ function MatchForm({ editingMatch }: { editingMatch?: Match }) {
     <Screen compactTop>
       <DateField label={t("playedOn")} value={playedAt} onChange={setPlayedAt} />
       {teamAPlayerIds.map((value, index) => (
-        <PlayerPicker key={`a-${index}`} label={`${t("teamA")} ${t("player").toLowerCase()} ${index + 1}`} players={activePlayers} value={value} onChange={(id) => setPlayer("A", index, id)} />
+        <PlayerPicker
+          key={`a-${index}`}
+          label={`${t("teamA")} ${t("player").toLowerCase()} ${index + 1}`}
+          players={activePlayers}
+          value={value}
+          onChange={(id) => setPlayer("A", index, id)}
+        />
       ))}
       {teamBPlayerIds.map((value, index) => (
-        <PlayerPicker key={`b-${index}`} label={`${t("teamB")} ${t("player").toLowerCase()} ${index + 1}`} players={activePlayers} value={value} onChange={(id) => setPlayer("B", index, id)} />
+        <PlayerPicker
+          key={`b-${index}`}
+          label={`${t("teamB")} ${t("player").toLowerCase()} ${index + 1}`}
+          players={activePlayers}
+          value={value}
+          onChange={(id) => setPlayer("B", index, id)}
+        />
       ))}
       {sets.map((set, index) => (
         <View key={index} style={styles.setRow}>
-          <Text style={styles.label}>{t("set")} {index + 1}</Text>
-          <TextInput style={styles.scoreInput} keyboardType="number-pad" value={String(set.teamAPoints)} onBlur={() => commitSet(index, "teamAPoints")} onChangeText={(value) => setSet(index, "teamAPoints", value)} />
-          <TextInput style={styles.scoreInput} keyboardType="number-pad" value={String(set.teamBPoints)} onBlur={() => commitSet(index, "teamBPoints")} onChangeText={(value) => setSet(index, "teamBPoints", value)} />
+          <Text style={styles.label}>
+            {t("set")} {index + 1}
+          </Text>
+          <TextInput
+            style={styles.scoreInput}
+            keyboardType="number-pad"
+            value={String(set.teamAPoints)}
+            onBlur={() => commitSet(index, "teamAPoints")}
+            onChangeText={(value) => setSet(index, "teamAPoints", value)}
+          />
+          <TextInput
+            style={styles.scoreInput}
+            keyboardType="number-pad"
+            value={String(set.teamBPoints)}
+            onBlur={() => commitSet(index, "teamBPoints")}
+            onChangeText={(value) => setSet(index, "teamBPoints", value)}
+          />
         </View>
       ))}
-      {sets.length < 3 && <SecondaryButton label={t("addSet")} onPress={() => setSets((current) => [...current, { teamAPoints: 15, teamBPoints: 12 }])} />}
-      {sets.length > 1 && <SecondaryButton label={t("removeSet")} onPress={() => setSets((current) => current.slice(0, -1))} />}
-      <PrimaryButton label={busy ? t("saving") : editingMatch ? t("saveCorrection") : t("saveMatch")} disabled={busy} onPress={submit} />
+      {sets.length < 3 && (
+        <SecondaryButton
+          label={t("addSet")}
+          onPress={() => setSets((current) => [...current, { teamAPoints: 15, teamBPoints: 12 }])}
+        />
+      )}
+      {sets.length > 1 && (
+        <SecondaryButton label={t("removeSet")} onPress={() => setSets((current) => current.slice(0, -1))} />
+      )}
+      <PrimaryButton
+        label={busy ? t("saving") : editingMatch ? t("saveCorrection") : t("saveMatch")}
+        disabled={busy}
+        onPress={submit}
+      />
     </Screen>
   );
 }
@@ -646,7 +745,10 @@ function ProfileScreen() {
         <Text style={styles.profileMeta}>{user?.role}</Text>
       </View>
       <LanguageDropdown />
-      <PrimaryButton label={t("logOut")} onPress={() => logout().catch((error: Error) => Alert.alert(t("couldNotLogOut"), error.message))} />
+      <PrimaryButton
+        label={t("logOut")}
+        onPress={() => logout().catch((error: Error) => Alert.alert(t("couldNotLogOut"), error.message))}
+      />
     </Screen>
   );
 }
@@ -685,7 +787,7 @@ function AdminScreen() {
       displayName,
       password,
       role,
-      playerId: linkedPlayerId || undefined
+      playerId: linkedPlayerId || undefined,
     });
     setEmail("");
     setDisplayName("");
@@ -704,33 +806,65 @@ function AdminScreen() {
         value={gender}
         options={[
           { label: t("men"), value: "MEN" },
-          { label: t("women"), value: "WOMEN" }
+          { label: t("women"), value: "WOMEN" },
         ]}
         onChange={setGender}
       />
       <SelectField
         label={t("initialRating")}
         value={rating}
-        options={ratingOptions.map((option) => ({ label: `${option} Elo`, value: option }))}
+        options={INITIAL_RATING_OPTIONS.map((option) => ({ label: `${option} Elo`, value: option }))}
         onChange={setRating}
       />
-      <PrimaryButton label={t("addPlayer")} disabled={!playerName} onPress={() => createPlayer().catch((error: Error) => Alert.alert(t("couldNotAddPlayer"), error.message))} />
+      <PrimaryButton
+        label={t("addPlayer")}
+        disabled={!playerName}
+        onPress={() => createPlayer().catch((error: Error) => Alert.alert(t("couldNotAddPlayer"), error.message))}
+      />
 
       <Text style={styles.sectionTitle}>{t("createUser")}</Text>
-      <TextInput style={styles.input} autoCapitalize="none" keyboardType="email-address" placeholder={t("email")} value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder={t("displayName")} value={displayName} onChangeText={setDisplayName} />
-      <TextInput style={styles.input} placeholder={t("temporaryPassword")} secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput
+        style={styles.input}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        placeholder={t("email")}
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={t("displayName")}
+        value={displayName}
+        onChangeText={setDisplayName}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={t("temporaryPassword")}
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
       <SelectField
         label={t("role")}
         value={role}
         options={[
           { label: t("playerRole"), value: "PLAYER" },
-          { label: t("adminRole"), value: "ADMIN" }
+          { label: t("adminRole"), value: "ADMIN" },
         ]}
         onChange={setRole}
       />
-      <PlayerPicker label={t("linkedPlayer")} players={players} value={linkedPlayerId} onChange={setLinkedPlayerId} optional />
-      <PrimaryButton label={t("createUser")} disabled={!email || !displayName || password.length < 8} onPress={() => createUser().catch((error: Error) => Alert.alert(t("couldNotCreateUser"), error.message))} />
+      <PlayerPicker
+        label={t("linkedPlayer")}
+        players={players}
+        value={linkedPlayerId}
+        onChange={setLinkedPlayerId}
+        optional
+      />
+      <PrimaryButton
+        label={t("createUser")}
+        disabled={!email || !displayName || password.length < 8}
+        onPress={() => createUser().catch((error: Error) => Alert.alert(t("couldNotCreateUser"), error.message))}
+      />
     </Screen>
   );
 }
@@ -739,7 +873,7 @@ function MatchList({
   matches,
   canEdit = false,
   onEdit,
-  onDelete
+  onDelete,
 }: {
   matches: Match[];
   canEdit?: boolean;
@@ -758,14 +892,27 @@ function MatchList({
       keyExtractor={(match) => match.id}
       renderItem={({ item }) => (
         <View style={styles.card}>
-          <Text style={styles.rowMeta}>{new Date(item.playedAt).toLocaleDateString(dateLocale)} {item.rated ? "" : `· ${t("unrated")}`}</Text>
-          <Text style={styles.rowTitle}>{t("teamA")}: {item.teamA.map((player) => player.name).join(" / ")}</Text>
-          <Text style={styles.rowTitle}>{t("teamB")}: {item.teamB.map((player) => player.name).join(" / ")}</Text>
-          <Text style={styles.rowMeta}>{formatScore(item.sets)} · {t("enteredBy")} {item.enteredBy.displayName}</Text>
+          <Text style={styles.rowMeta}>
+            {new Date(item.playedAt).toLocaleDateString(dateLocale)} {item.rated ? "" : `· ${t("unrated")}`}
+          </Text>
+          <Text style={styles.rowTitle}>
+            {t("teamA")}: {item.teamA.map((player) => player.name).join(" / ")}
+          </Text>
+          <Text style={styles.rowTitle}>
+            {t("teamB")}: {item.teamB.map((player) => player.name).join(" / ")}
+          </Text>
+          <Text style={styles.rowMeta}>
+            {formatScore(item.sets)} · {t("enteredBy")} {item.enteredBy.displayName}
+          </Text>
           {canEdit && (
             <View style={styles.actions}>
               <SecondaryButton label={t("edit")} onPress={() => onEdit?.(item)} />
-              <SecondaryButton label={t("delete")} onPress={() => onDelete?.(item).catch((error: Error) => Alert.alert(t("couldNotDeleteMatch"), error.message))} />
+              <SecondaryButton
+                label={t("delete")}
+                onPress={() =>
+                  onDelete?.(item).catch((error: Error) => Alert.alert(t("couldNotDeleteMatch"), error.message))
+                }
+              />
             </View>
           )}
         </View>
@@ -779,7 +926,7 @@ function PlayerPicker({
   players,
   value,
   onChange,
-  optional = false
+  optional = false,
 }: {
   label: string;
   players: Player[];
@@ -790,7 +937,7 @@ function PlayerPicker({
   const { t } = useLocaleContext();
   const options = [
     optional ? { label: t("noLinkedPlayer"), value: "" } : { label: t("selectPlayer"), value: "" },
-    ...players.map((player) => ({ label: player.name, value: player.id }))
+    ...players.map((player) => ({ label: player.name, value: player.id })),
   ];
 
   return (
@@ -808,7 +955,7 @@ function LanguageDropdown({ compact = false }: { compact?: boolean }) {
   const { language, setLanguage, t } = useLocaleContext();
   const options = languageOptions.map((option) => ({
     label: compact ? option.shortLabel : option.label,
-    value: option.value
+    value: option.value,
   }));
 
   return (
@@ -828,7 +975,7 @@ function SelectField<T extends string | number>({
   value,
   options,
   placeholder,
-  onChange
+  onChange,
 }: {
   label: string;
   value: T;
@@ -840,7 +987,7 @@ function SelectField<T extends string | number>({
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
   const fallbackLabel = placeholder ?? t("select");
-  const displayLabel = String(selected?.value ?? "") === "" ? fallbackLabel : selected?.label ?? fallbackLabel;
+  const displayLabel = String(selected?.value ?? "") === "" ? fallbackLabel : (selected?.label ?? fallbackLabel);
 
   function select(next: T) {
     onChange(next);
@@ -866,8 +1013,13 @@ function SelectField<T extends string | number>({
               data={options}
               keyExtractor={(option) => String(option.value)}
               renderItem={({ item }) => (
-                <Pressable style={[styles.selectOption, item.value === value && styles.selectOptionActive]} onPress={() => select(item.value)}>
-                  <Text style={[styles.selectOptionText, item.value === value && styles.selectOptionTextActive]}>{item.label}</Text>
+                <Pressable
+                  style={[styles.selectOption, item.value === value && styles.selectOptionActive]}
+                  onPress={() => select(item.value)}
+                >
+                  <Text style={[styles.selectOptionText, item.value === value && styles.selectOptionTextActive]}>
+                    {item.label}
+                  </Text>
                 </Pressable>
               )}
             />
@@ -878,15 +1030,7 @@ function SelectField<T extends string | number>({
   );
 }
 
-function DateField({
-  label,
-  value,
-  onChange
-}: {
-  label: string;
-  value: Date;
-  onChange: (value: Date) => void;
-}) {
+function DateField({ label, value, onChange }: { label: string; value: Date; onChange: (value: Date) => void }) {
   const { dateLocale, t } = useLocaleContext();
   const [open, setOpen] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(value));
@@ -914,11 +1058,17 @@ function DateField({
               </Pressable>
             </View>
             <View style={styles.monthHeader}>
-              <Pressable style={styles.monthNavButton} onPress={() => setMonthCursor((current) => addMonths(current, -1))}>
+              <Pressable
+                style={styles.monthNavButton}
+                onPress={() => setMonthCursor((current) => addMonths(current, -1))}
+              >
                 <Text style={styles.monthNavText}>{"<"}</Text>
               </Pressable>
               <Text style={styles.monthTitle}>{formatMonthYear(monthCursor, dateLocale)}</Text>
-              <Pressable style={styles.monthNavButton} onPress={() => setMonthCursor((current) => addMonths(current, 1))}>
+              <Pressable
+                style={styles.monthNavButton}
+                onPress={() => setMonthCursor((current) => addMonths(current, 1))}
+              >
                 <Text style={styles.monthNavText}>{">"}</Text>
               </Pressable>
             </View>
@@ -937,11 +1087,13 @@ function DateField({
                     style={[styles.calendarDay, sameDay(day, value) && styles.calendarDaySelected]}
                     onPress={() => selectDate(day)}
                   >
-                    <Text style={[styles.calendarDayText, sameDay(day, value) && styles.calendarDayTextSelected]}>{day.getDate()}</Text>
+                    <Text style={[styles.calendarDayText, sameDay(day, value) && styles.calendarDayTextSelected]}>
+                      {day.getDate()}
+                    </Text>
                   </Pressable>
                 ) : (
                   <View key={`empty-${index}`} style={styles.calendarDay} />
-                )
+                ),
               )}
             </View>
             <PrimaryButton label={t("today")} onPress={() => selectDate(new Date())} />
@@ -992,7 +1144,11 @@ function buildMonthDays(month: Date) {
 }
 
 function sameDay(left: Date, right: Date) {
-  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
 }
 
 function formatDisplayDate(value: Date, locale: string) {
@@ -1000,14 +1156,14 @@ function formatDisplayDate(value: Date, locale: string) {
     weekday: "short",
     year: "numeric",
     month: "short",
-    day: "numeric"
+    day: "numeric",
   });
 }
 
 function formatMonthYear(value: Date, locale: string) {
   return value.toLocaleDateString(locale, {
     month: "long",
-    year: "numeric"
+    year: "numeric",
   });
 }
 
@@ -1027,7 +1183,7 @@ function toMatchPlayedAtIso(value: Date) {
 function Segmented<T extends string>({
   value,
   options,
-  onChange
+  onChange,
 }: {
   value: T;
   options: Array<{ label: string; value: T }>;
@@ -1036,7 +1192,11 @@ function Segmented<T extends string>({
   return (
     <View style={styles.segmented}>
       {options.map((option) => (
-        <Pressable key={option.value} style={[styles.segment, value === option.value && styles.segmentActive]} onPress={() => onChange(option.value)}>
+        <Pressable
+          key={option.value}
+          style={[styles.segment, value === option.value && styles.segmentActive]}
+          onPress={() => onChange(option.value)}
+        >
           <Text style={[styles.segmentText, value === option.value && styles.segmentTextActive]}>{option.label}</Text>
         </Pressable>
       ))}
@@ -1063,7 +1223,7 @@ function SecondaryButton({ label, onPress }: { label: string; onPress: () => voi
 function Screen({
   children,
   scroll = true,
-  compactTop = false
+  compactTop = false,
 }: {
   children: ReactNode;
   scroll?: boolean;
@@ -1116,7 +1276,7 @@ const colors = {
   muted: "#65726b",
   line: "#d9e1d7",
   bg: "#f3f7f2",
-  card: "#ffffff"
+  card: "#ffffff",
 };
 
 const styles = StyleSheet.create({
@@ -1125,29 +1285,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 14,
     padding: 24,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   safeScreen: {
     flex: 1,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   scrollScreen: {
     flex: 1,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   screen: {
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   screenCompact: {
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   screenContainer: {
     flex: 1,
@@ -1155,7 +1315,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   screenContainerCompact: {
     flex: 1,
@@ -1163,7 +1323,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   screenHeader: {
     gap: 4,
@@ -1171,50 +1331,50 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     padding: 14,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   screenHeaderTitle: {
     color: colors.ink,
     fontSize: 20,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   screenHeaderSubtitle: {
     color: colors.muted,
     fontSize: 13,
-    lineHeight: 18
+    lineHeight: 18,
   },
   sectionTitle: {
     color: colors.ink,
     fontSize: 16,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   list: {
-    flex: 1
+    flex: 1,
   },
   tabIcon: {
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   podium: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 2,
-    height: 20
+    height: 20,
   },
   podiumBar: {
     width: 5,
-    borderRadius: 2
+    borderRadius: 2,
   },
   podiumFirst: {
-    height: 20
+    height: 20,
   },
   podiumSecond: {
     height: 14,
-    opacity: 0.75
+    opacity: 0.75,
   },
   podiumThird: {
     height: 10,
-    opacity: 0.55
+    opacity: 0.55,
   },
   matchIconCard: {
     width: 21,
@@ -1223,17 +1383,17 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 2,
     borderRadius: 4,
-    paddingHorizontal: 4
+    paddingHorizontal: 4,
   },
   matchIconLine: {
     width: 10,
     height: 2,
-    borderRadius: 1
+    borderRadius: 1,
   },
   matchIconLineShort: {
     width: 7,
     height: 2,
-    borderRadius: 1
+    borderRadius: 1,
   },
   addIconRing: {
     width: 22,
@@ -1241,25 +1401,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderRadius: 11
+    borderRadius: 11,
   },
   addIconHorizontal: {
     position: "absolute",
     width: 11,
     height: 2,
-    borderRadius: 1
+    borderRadius: 1,
   },
   addIconVertical: {
     position: "absolute",
     width: 2,
     height: 11,
-    borderRadius: 1
+    borderRadius: 1,
   },
   adminIconHead: {
     width: 8,
     height: 8,
     borderWidth: 2,
-    borderRadius: 4
+    borderRadius: 4,
   },
   adminIconBody: {
     width: 18,
@@ -1268,13 +1428,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderTopLeftRadius: 9,
     borderTopRightRadius: 9,
-    borderBottomWidth: 0
+    borderBottomWidth: 0,
   },
   profileIconHead: {
     width: 9,
     height: 9,
     borderWidth: 2,
-    borderRadius: 4.5
+    borderRadius: 4.5,
   },
   profileIconBody: {
     width: 18,
@@ -1283,28 +1443,28 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderTopLeftRadius: 9,
     borderTopRightRadius: 9,
-    borderBottomWidth: 0
+    borderBottomWidth: 0,
   },
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   brand: {
     color: colors.ink,
     fontSize: 34,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15
+    fontSize: 15,
   },
   help: {
     color: colors.muted,
     fontSize: 13,
-    lineHeight: 18
+    lineHeight: 18,
   },
   input: {
     minHeight: 46,
@@ -1313,10 +1473,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     color: colors.ink,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   field: {
-    gap: 6
+    gap: 6,
   },
   selectButton: {
     minHeight: 46,
@@ -1327,53 +1487,53 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     paddingHorizontal: 12,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   selectText: {
     flex: 1,
     color: colors.ink,
     fontSize: 15,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   selectPlaceholder: {
-    color: colors.muted
+    color: colors.muted,
   },
   selectChevron: {
     marginLeft: 8,
     color: colors.green,
     fontSize: 13,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   modalBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.28)"
+    backgroundColor: "rgba(0, 0, 0, 0.28)",
   },
   selectModal: {
     maxHeight: "72%",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     padding: 16,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   dateModal: {
     maxHeight: "78%",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     padding: 16,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   selectModalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12
+    marginBottom: 12,
   },
   monthHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12
+    marginBottom: 12,
   },
   monthNavButton: {
     minWidth: 40,
@@ -1383,34 +1543,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: 8,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   monthNavText: {
     color: colors.green,
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   monthTitle: {
     color: colors.ink,
     fontSize: 16,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   weekdayRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8
+    marginBottom: 8,
   },
   weekdayText: {
     width: 36,
     color: colors.muted,
     textAlign: "center",
     fontSize: 12,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   calendarGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 12
+    marginBottom: 12,
   },
   calendarDay: {
     width: "14.2857%",
@@ -1418,23 +1578,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
-    borderRadius: 8
+    borderRadius: 8,
   },
   calendarDaySelected: {
-    backgroundColor: colors.green
+    backgroundColor: colors.green,
   },
   calendarDayText: {
     color: colors.ink,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   calendarDayTextSelected: {
     color: "#ffffff",
-    fontWeight: "900"
+    fontWeight: "900",
   },
   selectModalTitle: {
     color: colors.ink,
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   selectOption: {
     minHeight: 46,
@@ -1444,36 +1604,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
     paddingHorizontal: 12,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   selectOptionActive: {
     borderColor: colors.green,
-    backgroundColor: "#e8efe5"
+    backgroundColor: "#e8efe5",
   },
   selectOptionText: {
     color: colors.ink,
     fontSize: 15,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   selectOptionTextActive: {
     color: colors.green,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   label: {
     color: colors.muted,
     fontSize: 13,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   primaryButton: {
     minHeight: 46,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,
-    backgroundColor: colors.green
+    backgroundColor: colors.green,
   },
   primaryButtonText: {
     color: "#ffffff",
-    fontWeight: "800"
+    fontWeight: "800",
   },
   secondaryButton: {
     minHeight: 38,
@@ -1483,37 +1643,37 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     paddingHorizontal: 12,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   secondaryButtonText: {
     color: colors.green,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   disabled: {
-    opacity: 0.5
+    opacity: 0.5,
   },
   segmented: {
     flexDirection: "row",
     gap: 6,
     padding: 4,
     borderRadius: 10,
-    backgroundColor: "#e8efe5"
+    backgroundColor: "#e8efe5",
   },
   segment: {
     flex: 1,
     alignItems: "center",
     borderRadius: 8,
-    paddingVertical: 10
+    paddingVertical: 10,
   },
   segmentActive: {
-    backgroundColor: colors.green
+    backgroundColor: colors.green,
   },
   segmentText: {
     color: colors.muted,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   segmentTextActive: {
-    color: "#ffffff"
+    color: "#ffffff",
   },
   row: {
     flexDirection: "row",
@@ -1524,29 +1684,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
     padding: 14,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   rank: {
     width: 42,
     color: colors.green,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   rowMain: {
-    flex: 1
+    flex: 1,
   },
   rowTitle: {
     color: colors.ink,
     fontSize: 16,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   rowMeta: {
     color: colors.muted,
-    fontSize: 13
+    fontSize: 13,
   },
   rating: {
     color: colors.ink,
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   card: {
     gap: 8,
@@ -1555,16 +1715,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     padding: 14,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   actions: {
     flexDirection: "row",
-    gap: 8
+    gap: 8,
   },
   setRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: 8,
   },
   scoreInput: {
     width: 72,
@@ -1573,12 +1733,12 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     paddingHorizontal: 10,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   empty: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 160
+    minHeight: 160,
   },
   accountBar: {
     flexDirection: "row",
@@ -1588,11 +1748,11 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   accountName: {
     color: colors.ink,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   profileCard: {
     gap: 6,
@@ -1600,19 +1760,19 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: 8,
     padding: 14,
-    backgroundColor: colors.card
+    backgroundColor: colors.card,
   },
   profileName: {
     color: colors.ink,
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
   },
   profileMeta: {
     color: colors.muted,
-    fontSize: 14
+    fontSize: 14,
   },
   logoutText: {
     color: colors.green,
-    fontWeight: "800"
-  }
+    fontWeight: "800",
+  },
 });

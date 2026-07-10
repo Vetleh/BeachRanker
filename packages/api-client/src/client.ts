@@ -35,7 +35,7 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
         ...requestOptions,
         credentials: options.credentials,
         headers,
-        signal: requestOptions.signal ?? controller?.signal
+        signal: requestOptions.signal ?? controller?.signal,
       });
 
       if (!response.ok) {
@@ -62,7 +62,7 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
             controller?.abort();
             reject(new Error("Request timed out"));
           }, timeoutMs);
-        })
+        }),
       ]);
     } finally {
       if (timeout) {
@@ -75,7 +75,7 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
     login: async (email: string, password: string) => {
       const payload = await request<LoginResponse>("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password, authMode: options.authMode ?? "cookie" })
+        body: JSON.stringify({ email, password, authMode: options.authMode ?? "cookie" }),
       });
       if (payload.token) {
         await options.setToken?.(payload.token);
@@ -94,17 +94,17 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
     createPlayer: (name: string, initialRating: number, gender: PlayerGender) =>
       request<{ player: Player }>("/api/players", {
         method: "POST",
-        body: JSON.stringify({ name, initialRating, gender })
+        body: JSON.stringify({ name, initialRating, gender }),
       }),
     createUser: (payload: CreateUserPayload) =>
       request<{ user: User }>("/api/users", {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }),
     resetPassword: (userId: string, password: string) =>
       request<{ user: User }>(`/api/users/${encodeURIComponent(userId)}/password`, {
         method: "PATCH",
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password }),
       }),
     rankings: () => request<{ rankings: Ranking[] }>("/api/rankings"),
     matches: (playerId?: string) => {
@@ -114,13 +114,13 @@ export function createBeachRankerApi(options: ApiClientOptions = {}) {
     createMatch: (payload: MatchPayload) =>
       request<{ match: Match }>("/api/matches", {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }),
     updateMatch: (id: string, payload: MatchPayload) =>
       request<{ match: Match }>(`/api/matches/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }),
-    deleteMatch: (id: string) => request<void>(`/api/matches/${encodeURIComponent(id)}`, { method: "DELETE" })
+    deleteMatch: (id: string) => request<void>(`/api/matches/${encodeURIComponent(id)}`, { method: "DELETE" }),
   };
 }

@@ -16,7 +16,10 @@ export function base64UrlEncode(input: Uint8Array | string) {
 }
 
 export function base64UrlDecode(input: string) {
-  const padded = input.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(input.length / 4) * 4, "=");
+  const padded = input
+    .replaceAll("-", "+")
+    .replaceAll("_", "/")
+    .padEnd(Math.ceil(input.length / 4) * 4, "=");
   const binary = atob(padded);
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
@@ -27,8 +30,7 @@ export async function hmacSha256(secret: string, data: string) {
     new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign", "verify"]
+    ["sign", "verify"],
   );
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data)));
 }
-

@@ -8,20 +8,20 @@ describe("domain rules", () => {
       calculateEloUpdate({
         teamA: [
           { id: "a1", rating: 1500 },
-          { id: "a2", rating: 1500 }
+          { id: "a2", rating: 1500 },
         ],
         teamB: [
           { id: "b1", rating: 1500 },
-          { id: "b2", rating: 1500 }
+          { id: "b2", rating: 1500 },
         ],
         winningTeam: "A",
-        isTiebreak: false
-      })
+        isTiebreak: false,
+      }),
     ).toEqual([
       { playerId: "a1", preRating: 1500, postRating: 1516, delta: 16 },
       { playerId: "a2", preRating: 1500, postRating: 1516, delta: 16 },
       { playerId: "b1", preRating: 1500, postRating: 1484, delta: -16 },
-      { playerId: "b2", preRating: 1500, postRating: 1484, delta: -16 }
+      { playerId: "b2", preRating: 1500, postRating: 1484, delta: -16 },
     ]);
   });
 
@@ -29,7 +29,7 @@ describe("domain rules", () => {
     const sets = [
       { teamAPoints: 21, teamBPoints: 19 },
       { teamAPoints: 18, teamBPoints: 21 },
-      { teamAPoints: 15, teamBPoints: 12 }
+      { teamAPoints: 15, teamBPoints: 12 },
     ];
 
     expect(deriveWinnerFromSets(sets)).toBe("A");

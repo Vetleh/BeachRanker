@@ -18,6 +18,5 @@ export default {
     } catch (error) {
       return errorResponse(error);
     }
-  }
+  },
 };
-

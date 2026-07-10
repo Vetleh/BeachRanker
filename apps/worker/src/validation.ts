@@ -1,13 +1,11 @@
 import {
   deriveWinnerFromSets as deriveDomainWinnerFromSets,
   findTiedSetNumber,
-  hasUniquePlayers
+  hasUniquePlayers,
 } from "@beach-ranker/domain/matchRules";
+import { INITIAL_RATING_OPTIONS, PLAYER_GENDERS, type PlayerGender } from "@beach-ranker/domain";
 import { ApiError } from "./http";
 import type { MatchInput, MatchSet, TeamSide } from "./types";
-
-const INITIAL_RATING_OPTIONS = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000] as const;
-const PLAYER_GENDERS = ["MEN", "WOMEN"] as const;
 
 export function parseLogin(input: unknown) {
   const body = object(input);
@@ -29,10 +27,13 @@ export function parsePlayer(input: unknown) {
   if (!name) {
     throw new ApiError(400, "Player name is required");
   }
-  const active = body.active === undefined ? undefined : Boolean(body.active);
+  const active = optionalBoolean(body.active, "active");
   const initialRating = body.initialRating === undefined ? undefined : number(body.initialRating, "initialRating");
   const gender = parsePlayerGender(body.gender);
-  if (initialRating !== undefined && !INITIAL_RATING_OPTIONS.includes(initialRating as (typeof INITIAL_RATING_OPTIONS)[number])) {
+  if (
+    initialRating !== undefined &&
+    !INITIAL_RATING_OPTIONS.includes(initialRating as (typeof INITIAL_RATING_OPTIONS)[number])
+  ) {
     throw new ApiError(400, "Invalid initial rating");
   }
   return { name, active, initialRating, gender };
@@ -42,7 +43,7 @@ export function parsePlayerPatch(input: unknown) {
   const body = object(input);
   return {
     name: body.name === undefined ? undefined : string(body.name, "name").trim(),
-    active: body.active === undefined ? undefined : Boolean(body.active)
+    active: optionalBoolean(body.active, "active"),
   };
 }
 
@@ -82,7 +83,7 @@ export function parseMatch(input: unknown): MatchInput {
     teamAPlayerIds,
     teamBPlayerIds,
     sets,
-    isTiebreak: body.isTiebreak === undefined ? undefined : Boolean(body.isTiebreak)
+    isTiebreak: optionalBoolean(body.isTiebreak, "isTiebreak"),
   };
 }
 
@@ -123,7 +124,7 @@ function parsePlayerGender(input: unknown) {
   if (!PLAYER_GENDERS.includes(input as (typeof PLAYER_GENDERS)[number])) {
     throw new ApiError(400, "Player gender is required");
   }
-  return input as (typeof PLAYER_GENDERS)[number];
+  return input as PlayerGender;
 }
 
 function array(input: unknown, name: string) {
@@ -142,7 +143,7 @@ function stringArray(input: unknown, name: string, length: number) {
 }
 
 function string(input: unknown, name: string) {
-  if (typeof input !== "string" || !input) {
+  if (typeof input !== "string" || !input.trim()) {
     throw new ApiError(400, `${name} is required`);
   }
   return input;
@@ -163,9 +164,18 @@ function isoDateString(input: unknown, name: string) {
 }
 
 function number(input: unknown, name: string) {
-  const value = Number(input);
-  if (!Number.isInteger(value) || value < 0) {
+  if (typeof input !== "number" || !Number.isInteger(input) || input < 0) {
     throw new ApiError(400, `${name} must be a non-negative integer`);
   }
-  return value;
+  return input;
+}
+
+function optionalBoolean(input: unknown, name: string) {
+  if (input === undefined) {
+    return undefined;
+  }
+  if (typeof input !== "boolean") {
+    throw new ApiError(400, `${name} must be a boolean`);
+  }
+  return input;
 }

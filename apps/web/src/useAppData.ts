@@ -15,7 +15,7 @@ export function useAppData(onError: (message: string) => void) {
     const [playersResult, rankingsResult, matchesResult] = await Promise.all([
       api.players(),
       api.rankings(),
-      api.matches()
+      api.matches(),
     ]);
 
     setPlayers(playersResult.players);
@@ -24,24 +24,32 @@ export function useAppData(onError: (message: string) => void) {
   }, []);
 
   useEffect(() => {
+    let current = true;
     api
       .me()
-      .then(({ user }) => {
-        setUser(user);
+      .then(async ({ user: nextUser }) => {
+        if (!current) {
+          return;
+        }
+        setUser(nextUser);
+        await refreshData();
       })
-      .catch(() => {
-        setUser(null);
+      .catch((err: Error) => {
+        if (current) {
+          setUser(null);
+          onError(err.message);
+        }
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (current) {
+          setLoading(false);
+        }
+      });
 
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    refreshData().catch((err: Error) => onError(err.message));
-  }, [onError, refreshData, user]);
+    return () => {
+      current = false;
+    };
+  }, [onError, refreshData]);
 
   const logout = useCallback(async () => {
     await api.logout();
@@ -80,7 +88,7 @@ export function useAppData(onError: (message: string) => void) {
         isCurrent = false;
       };
     },
-    [onError]
+    [onError],
   );
 
   return {
@@ -94,6 +102,6 @@ export function useAppData(onError: (message: string) => void) {
     profileLoading,
     refreshData,
     logout,
-    loadProfileMatches
+    loadProfileMatches,
   };
 }

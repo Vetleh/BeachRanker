@@ -15,17 +15,17 @@ export async function recalculateRatings(db: D1Database) {
 
     const teamA = [match.teamAPlayer1Id, match.teamAPlayer2Id].map((id) => ({
       id,
-      rating: ratings.get(id) ?? STARTING_RATING
+      rating: ratings.get(id) ?? STARTING_RATING,
     }));
     const teamB = [match.teamBPlayer1Id, match.teamBPlayer2Id].map((id) => ({
       id,
-      rating: ratings.get(id) ?? STARTING_RATING
+      rating: ratings.get(id) ?? STARTING_RATING,
     }));
     const results = calculateElo({
       teamA,
       teamB,
       winningTeam: match.winningTeam,
-      isTiebreak: match.isTiebreak === 1
+      isTiebreak: match.isTiebreak === 1,
     });
     snapshots.push(...results.map((result) => ({ matchId: match.id, ...result })));
     results.forEach((result) => ratings.set(result.playerId, result.postRating));
@@ -48,9 +48,9 @@ export async function getRankings(db: D1Database) {
         matchesPlayed: 0,
         wins: 0,
         losses: 0,
-        recentDelta: 0
-      }
-    ])
+        recentDelta: 0,
+      },
+    ]),
   );
 
   for (const match of matches) {
@@ -97,12 +97,18 @@ export async function getRankings(db: D1Database) {
       active: player.active,
       gender: player.gender,
       rating: ratings.get(player.id) ?? STARTING_RATING,
-      ...(stats.get(player.id) ?? { matchesPlayed: 0, wins: 0, losses: 0, recentDelta: 0 })
+      ...(stats.get(player.id) ?? { matchesPlayed: 0, wins: 0, losses: 0, recentDelta: 0 }),
     }))
-    .sort((left, right) => left.gender.localeCompare(right.gender) || right.rating - left.rating || left.name.localeCompare(right.name))
+    .sort(
+      (left, right) =>
+        left.gender.localeCompare(right.gender) || right.rating - left.rating || left.name.localeCompare(right.name),
+    )
     .map((player, index, sortedPlayers) => ({
-      rank: sortedPlayers.filter((candidate) => candidate.gender === player.gender).findIndex((candidate) => candidate.id === player.id) + 1,
-      ...player
+      rank:
+        sortedPlayers
+          .filter((candidate) => candidate.gender === player.gender)
+          .findIndex((candidate) => candidate.id === player.id) + 1,
+      ...player,
     }));
 }
 
@@ -118,17 +124,17 @@ export async function formatMatch(db: D1Database, match: MatchRow) {
     rated,
     teamA: [
       { id: match.teamAPlayer1Id, name: match.teamAPlayer1Name, deltaFor: ratingSnapshots },
-      { id: match.teamAPlayer2Id, name: match.teamAPlayer2Name, deltaFor: ratingSnapshots }
+      { id: match.teamAPlayer2Id, name: match.teamAPlayer2Name, deltaFor: ratingSnapshots },
     ].map(formatMatchPlayer),
     teamB: [
       { id: match.teamBPlayer1Id, name: match.teamBPlayer1Name, deltaFor: ratingSnapshots },
-      { id: match.teamBPlayer2Id, name: match.teamBPlayer2Name, deltaFor: ratingSnapshots }
+      { id: match.teamBPlayer2Id, name: match.teamBPlayer2Name, deltaFor: ratingSnapshots },
     ].map(formatMatchPlayer),
     sets,
     enteredBy: {
       id: match.enteredByUserId,
-      displayName: match.enteredByDisplayName
-    }
+      displayName: match.enteredByDisplayName,
+    },
   };
 }
 
@@ -146,7 +152,7 @@ function formatMatchPlayer(player: { id: string; name: string; deltaFor: RatingS
   return {
     id: player.id,
     name: player.name,
-    delta: player.deltaFor.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0
+    delta: player.deltaFor.find((snapshot) => snapshot.playerId === player.id)?.delta ?? 0,
   };
 }
 
@@ -155,7 +161,7 @@ function isRatedMatch(match: MatchRow) {
     match.teamAPlayer1Gender ?? "MEN",
     match.teamAPlayer2Gender ?? "MEN",
     match.teamBPlayer1Gender ?? "MEN",
-    match.teamBPlayer2Gender ?? "MEN"
+    match.teamBPlayer2Gender ?? "MEN",
   ];
   return genders.every((gender) => gender === genders[0]);
 }

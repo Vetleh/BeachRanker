@@ -26,7 +26,7 @@ export async function findPlayerByUserId(db: D1Database, userId: string) {
 
 export async function createPlayer(
   db: D1Database,
-  input: { name: string; active?: boolean; initialRating?: number; gender: PlayerGender }
+  input: { name: string; active?: boolean; initialRating?: number; gender: PlayerGender },
 ) {
   const player = {
     id: createId(),
@@ -35,18 +35,28 @@ export async function createPlayer(
     initialRating: input.initialRating ?? STARTING_RATING,
     gender: input.gender,
     createdAt: nowIso(),
-    updatedAt: nowIso()
+    updatedAt: nowIso(),
   };
   await db
-    .prepare("INSERT INTO players (id, name, active, initialRating, gender, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .bind(player.id, player.name, player.active, player.initialRating, player.gender, player.createdAt, player.updatedAt)
+    .prepare(
+      "INSERT INTO players (id, name, active, initialRating, gender, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(
+      player.id,
+      player.name,
+      player.active,
+      player.initialRating,
+      player.gender,
+      player.createdAt,
+      player.updatedAt,
+    )
     .run();
   return formatPlayer(player);
 }
 
 export async function createUser(
   db: D1Database,
-  input: { email: string; displayName: string; passwordHash: string; role: string; playerId?: string }
+  input: { email: string; displayName: string; passwordHash: string; role: string; playerId?: string },
 ) {
   const user = {
     id: createId(),
@@ -56,13 +66,22 @@ export async function createUser(
     role: input.role,
     active: 1,
     createdAt: nowIso(),
-    updatedAt: nowIso()
+    updatedAt: nowIso(),
   };
   await db
     .prepare(
-      "INSERT INTO users (id, email, displayName, passwordHash, role, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO users (id, email, displayName, passwordHash, role, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(user.id, user.email, user.displayName, user.passwordHash, user.role, user.active, user.createdAt, user.updatedAt)
+    .bind(
+      user.id,
+      user.email,
+      user.displayName,
+      user.passwordHash,
+      user.role,
+      user.active,
+      user.createdAt,
+      user.updatedAt,
+    )
     .run();
   if (input.playerId) {
     await linkPlayerToUser(db, input.playerId, user.id);
@@ -72,7 +91,7 @@ export async function createUser(
     email: user.email,
     displayName: user.displayName,
     role: user.role,
-    active: true
+    active: true,
   };
 }
 
@@ -86,7 +105,7 @@ export async function updatePlayer(db: D1Database, playerId: string, input: { na
   }
   const next = {
     name: input.name ?? current.name,
-    active: input.active === undefined ? current.active : input.active ? 1 : 0
+    active: input.active === undefined ? current.active : input.active ? 1 : 0,
   };
   await db
     .prepare("UPDATE players SET name = ?, active = ?, updatedAt = ? WHERE id = ?")
@@ -127,7 +146,7 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
   await db.batch([
     db
       .prepare(
-        "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
       .bind(
         matchId,
@@ -140,9 +159,9 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
         input.teamBPlayerIds[0],
         input.teamBPlayerIds[1],
         timestamp,
-        timestamp
+        timestamp,
       ),
-    ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set))
+    ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set)),
   ]);
 
   return matchId;
@@ -153,7 +172,7 @@ export async function updateMatch(db: D1Database, matchId: string, input: MatchI
   await db.batch([
     db
       .prepare(
-        "UPDATE matches SET playedAt = ?, winningTeam = ?, isTiebreak = ?, teamAPlayer1Id = ?, teamAPlayer2Id = ?, teamBPlayer1Id = ?, teamBPlayer2Id = ?, updatedAt = ? WHERE id = ?"
+        "UPDATE matches SET playedAt = ?, winningTeam = ?, isTiebreak = ?, teamAPlayer1Id = ?, teamAPlayer2Id = ?, teamBPlayer1Id = ?, teamBPlayer2Id = ?, updatedAt = ? WHERE id = ?",
       )
       .bind(
         input.playedAt,
@@ -164,10 +183,10 @@ export async function updateMatch(db: D1Database, matchId: string, input: MatchI
         input.teamBPlayerIds[0],
         input.teamBPlayerIds[1],
         nowIso(),
-        matchId
+        matchId,
       ),
     db.prepare("DELETE FROM match_sets WHERE matchId = ?").bind(matchId),
-    ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set))
+    ...input.sets.map((set, index) => insertSetStatement(db, matchId, index + 1, set)),
   ]);
 }
 
@@ -211,7 +230,7 @@ export async function listMatches(db: D1Database, playerId?: string) {
       JOIN players p4 ON p4.id = m.teamBPlayer2Id
       JOIN users u ON u.id = m.enteredByUserId
       ${playerFilter}
-      ORDER BY m.playedAt DESC, m.createdAt DESC`
+      ORDER BY m.playedAt DESC, m.createdAt DESC`,
   );
   const { results } = playerId ? await statement.bind(playerId).all<MatchRow>() : await statement.all<MatchRow>();
   return results;
@@ -236,7 +255,7 @@ export async function listSnapshots(db: D1Database) {
           rs.delta
         FROM rating_snapshots rs
         JOIN matches m ON m.id = rs.matchId
-        ORDER BY m.playedAt ASC, m.createdAt ASC, rs.playerId ASC`
+        ORDER BY m.playedAt ASC, m.createdAt ASC, rs.playerId ASC`,
     )
     .all<RatingSnapshot>();
   return results;
@@ -256,30 +275,27 @@ export async function replaceAllSnapshots(db: D1Database, snapshots: RatingSnaps
     ...snapshots.map((snapshot) =>
       db
         .prepare(
-          "INSERT INTO rating_snapshots (id, matchId, playerId, preRating, postRating, delta) VALUES (?, ?, ?, ?, ?, ?)"
+          "INSERT INTO rating_snapshots (id, matchId, playerId, preRating, postRating, delta) VALUES (?, ?, ?, ?, ?, ?)",
         )
-        .bind(createId(), snapshot.matchId, snapshot.playerId, snapshot.preRating, snapshot.postRating, snapshot.delta)
-    )
+        .bind(createId(), snapshot.matchId, snapshot.playerId, snapshot.preRating, snapshot.postRating, snapshot.delta),
+    ),
   ]);
 }
 
-function insertSetStatement(
-  db: D1Database,
-  matchId: string,
-  setNumber: number,
-  set: MatchSet
-): D1PreparedStatement {
+function insertSetStatement(db: D1Database, matchId: string, setNumber: number, set: MatchSet): D1PreparedStatement {
   return db
     .prepare("INSERT INTO match_sets (id, matchId, setNumber, teamAPoints, teamBPoints) VALUES (?, ?, ?, ?, ?)")
     .bind(createId(), matchId, setNumber, set.teamAPoints, set.teamBPoints);
 }
 
-function formatPlayer(player: Player | { id: string; name: string; active: number; initialRating?: number; gender?: PlayerGender }) {
+function formatPlayer(
+  player: Player | { id: string; name: string; active: number; initialRating?: number; gender?: PlayerGender },
+) {
   return {
     id: player.id,
     name: player.name,
     active: player.active === 1,
     initialRating: player.initialRating ?? STARTING_RATING,
-    gender: player.gender ?? "MEN"
+    gender: player.gender ?? "MEN",
   };
 }

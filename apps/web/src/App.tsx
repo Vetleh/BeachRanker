@@ -1,35 +1,19 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
-import {
-  ArrowLeft,
-  CalendarPlus,
-  History,
-  LogOut,
-  Shield,
-  Trophy,
-  UserRound,
-  Users,
-  Volleyball
-} from "lucide-react";
+import { ArrowLeft, CalendarPlus, History, LogOut, Shield, Trophy, UserRound, Users, Volleyball } from "lucide-react";
 import { api, type MatchPayload } from "./api";
 import { translate, type Language, type TranslationPath } from "./i18n";
 import { getActiveTab, useBrowserRoute, type RankingGender, type Tab } from "./router";
 import { deriveWinner, formatScore } from "./score";
-import type { Match, MatchSet, Player, PlayerGender, Ranking, Role, User } from "./types";
+import type { Match, Player, PlayerGender, Ranking, Role, User } from "./types";
 import { useAppData } from "./useAppData";
-
-const emptySets: MatchSet[] = [
-  { teamAPoints: 21, teamBPoints: 18 },
-  { teamAPoints: 21, teamBPoints: 18 }
-];
-
-type EditableScore = number | "";
-type ScoreField = "teamAPoints" | "teamBPoints";
-type EditableMatchSet = {
-  teamAPoints: EditableScore;
-  teamBPoints: EditableScore;
-};
-
-const initialRatingOptions = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000];
+import { INITIAL_RATING_OPTIONS } from "@beach-ranker/domain";
+import {
+  emptySets,
+  normalizeSets,
+  parseEditableScore,
+  type EditableMatchSet,
+  type ScoreField,
+} from "./features/matches/model";
 
 export function App() {
   const [language, setLanguage] = useState<Language>(() => {
@@ -50,13 +34,14 @@ export function App() {
     profileLoading,
     refreshData,
     logout,
-    loadProfileMatches
+    loadProfileMatches,
   } = useAppData(showError);
   const t = (path: TranslationPath, values?: Record<string, string | number>) => translate(language, path, values);
   const activeTab = getActiveTab(route);
   const profilePlayerId = route.name === "player" ? route.playerId : "";
-  const selectedProfile = profilePlayerId ? rankings.find((player) => player.id === profilePlayerId) ?? null : null;
-  const editingMatch = route.name === "editMatch" ? matches.find((match) => match.id === route.matchId) ?? null : null;
+  const selectedProfile = profilePlayerId ? (rankings.find((player) => player.id === profilePlayerId) ?? null) : null;
+  const editingMatch =
+    route.name === "editMatch" ? (matches.find((match) => match.id === route.matchId) ?? null) : null;
 
   function changeLanguage(nextLanguage: Language) {
     setLanguage(nextLanguage);
@@ -84,12 +69,12 @@ export function App() {
   }, [navigate, route.name, user]);
 
   useEffect(() => {
-    if (route.name !== "player" || !user || !selectedProfile) {
+    if (route.name !== "player" || !user || !selectedProfile?.id) {
       return;
     }
 
-    return loadProfileMatches(profilePlayerId, t("errors.loadProfile"));
-  }, [loadProfileMatches, route.name, profilePlayerId, selectedProfile?.id, user]);
+    return loadProfileMatches(profilePlayerId, translate(language, "errors.loadProfile"));
+  }, [language, loadProfileMatches, route.name, profilePlayerId, selectedProfile?.id, user]);
 
   if (loading) {
     return <div className="centered">{t("app.loading")}</div>;
@@ -103,7 +88,7 @@ export function App() {
     { id: "rankings", label: t("tabs.rankings"), icon: Trophy },
     { id: "matches", label: t("tabs.matches"), icon: History },
     { id: "add", label: editingMatch ? t("tabs.correctMatch") : t("tabs.addMatch"), icon: CalendarPlus },
-    { id: "admin", label: t("tabs.admin"), icon: Shield, adminOnly: true }
+    { id: "admin", label: t("tabs.admin"), icon: Shield, adminOnly: true },
   ];
 
   return (
@@ -192,8 +177,8 @@ export function App() {
               <p className="empty-state">{rankings.length === 0 ? t("matches.loading") : t("errors.loadProfile")}</p>
             </section>
           ))}
-        {(route.name === "newMatch" || route.name === "editMatch") && (
-          route.name === "editMatch" && !editingMatch ? (
+        {(route.name === "newMatch" || route.name === "editMatch") &&
+          (route.name === "editMatch" && !editingMatch ? (
             <section className="surface">
               <p className="empty-state">{matches.length === 0 ? t("matches.loading") : t("errors.loadProfile")}</p>
             </section>
@@ -208,9 +193,10 @@ export function App() {
                 navigate("/matches");
               }}
             />
-          )
+          ))}
+        {route.name === "admin" && user.role === "ADMIN" && (
+          <AdminView players={players} t={t} onChanged={refreshData} />
         )}
-        {route.name === "admin" && user.role === "ADMIN" && <AdminView players={players} t={t} onChanged={refreshData} />}
       </main>
     </div>
   );
@@ -235,7 +221,7 @@ function storeLanguage(language: Language) {
 function LanguageSelect({
   language,
   onChange,
-  t
+  t,
 }: {
   language: Language;
   onChange: (language: Language) => void;
@@ -258,7 +244,7 @@ function LoginScreen({
   language,
   onLanguageChange,
   t,
-  onLogin
+  onLogin,
 }: {
   language: Language;
   onLanguageChange: (language: Language) => void;
@@ -325,7 +311,7 @@ function RankingsView({
   rankings,
   onNavigate,
   onViewPlayer,
-  t
+  t,
 }: {
   gender: RankingGender;
   rankings: Ranking[];
@@ -355,7 +341,7 @@ function RankingTable({
   gender,
   onNavigate,
   onViewPlayer,
-  t
+  t,
 }: {
   rankings: Ranking[];
   title: string;
@@ -439,7 +425,7 @@ function MatchesView({
   canEdit,
   t,
   onEdit,
-  onDelete
+  onDelete,
 }: {
   matches: Match[];
   title?: string;
@@ -504,7 +490,7 @@ function PlayerProfileView({
   matches,
   loading,
   t,
-  onBack
+  onBack,
 }: {
   player: Ranking;
   matches: Match[];
@@ -530,7 +516,7 @@ function PlayerProfileView({
                 rank: player.rank,
                 rating: player.rating,
                 wins: player.wins,
-                losses: player.losses
+                losses: player.losses,
               })}
             </p>
           </div>
@@ -555,15 +541,7 @@ function PlayerProfileView({
   );
 }
 
-function TeamLine({
-  label,
-  players,
-  winner
-}: {
-  label: string;
-  players: Match["teamA"];
-  winner: boolean;
-}) {
+function TeamLine({ label, players, winner }: { label: string; players: Match["teamA"]; winner: boolean }) {
   const delta = players[0]?.delta ?? 0;
 
   return (
@@ -583,7 +561,7 @@ function MatchForm({
   editingMatch,
   t,
   onCancelEdit,
-  onSaved
+  onSaved,
 }: {
   players: Player[];
   editingMatch: Match | null;
@@ -625,13 +603,13 @@ function MatchForm({
 
   function updateSet(index: number, key: ScoreField, value: string) {
     setSets((current) =>
-      current.map((set, currentIndex) => (currentIndex === index ? { ...set, [key]: parseEditableScore(value) } : set))
+      current.map((set, currentIndex) => (currentIndex === index ? { ...set, [key]: parseEditableScore(value) } : set)),
     );
   }
 
   function commitSet(index: number, key: ScoreField) {
     setSets((current) =>
-      current.map((set, currentIndex) => (currentIndex === index && set[key] === "" ? { ...set, [key]: 0 } : set))
+      current.map((set, currentIndex) => (currentIndex === index && set[key] === "" ? { ...set, [key]: 0 } : set)),
     );
   }
 
@@ -655,7 +633,7 @@ function MatchForm({
       teamAPlayerIds,
       teamBPlayerIds,
       sets: numericSets,
-      isTiebreak
+      isTiebreak,
     };
 
     try {
@@ -771,29 +749,13 @@ function MatchForm({
   );
 }
 
-function parseEditableScore(value: string): EditableScore {
-  if (value === "") {
-    return "";
-  }
-
-  const score = Number(value);
-  return Number.isFinite(score) ? score : "";
-}
-
-function normalizeSets(sets: EditableMatchSet[]): MatchSet[] {
-  return sets.map((set) => ({
-    teamAPoints: set.teamAPoints === "" ? 0 : set.teamAPoints,
-    teamBPoints: set.teamBPoints === "" ? 0 : set.teamBPoints
-  }));
-}
-
 function PlayerSearchSelect({
   label,
   players,
   selectedPlayerIds,
   t,
   value,
-  onChange
+  onChange,
 }: {
   label: string;
   players: Player[];
@@ -809,7 +771,7 @@ function PlayerSearchSelect({
   const selectedPlayer = players.find((player) => player.id === value);
   const blockedPlayerIds = useMemo(
     () => new Set(selectedPlayerIds.filter((playerId) => playerId && playerId !== value)),
-    [selectedPlayerIds, value]
+    [selectedPlayerIds, value],
   );
   const normalizedSearch = search.trim().toLowerCase();
   const visiblePlayers = players.filter((player) => player.name.toLowerCase().includes(normalizedSearch));
@@ -889,7 +851,7 @@ function PlayerSearchSelect({
         aria-activedescendant={activeOptionId}
         aria-autocomplete="list"
         placeholder={t("playerSelect.search")}
-        value={isOpen ? search : selectedPlayer?.name ?? ""}
+        value={isOpen ? search : (selectedPlayer?.name ?? "")}
         onFocus={() => {
           setSearch("");
           setIsOpen(true);
@@ -953,11 +915,7 @@ function PlayerSearchSelect({
             const optionIndex = index + (value ? 1 : 0);
             return (
               <button
-                className={[
-                  "player-option",
-                  isBlocked ? "disabled" : "",
-                  activeIndex === optionIndex ? "active" : ""
-                ]
+                className={["player-option", isBlocked ? "disabled" : "", activeIndex === optionIndex ? "active" : ""]
                   .filter(Boolean)
                   .join(" ")}
                 key={player.id}
@@ -1015,7 +973,7 @@ function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator
       displayName,
       password,
       role,
-      playerId: playerId || undefined
+      playerId: playerId || undefined,
     });
     setEmail("");
     setDisplayName("");
@@ -1042,7 +1000,7 @@ function AdminView({ players, t, onChanged }: { players: Player[]; t: Translator
         <label>
           {t("admin.initialRating")}
           <select value={initialRating} onChange={(event) => setInitialRating(Number(event.target.value))}>
-            {initialRatingOptions.map((rating) => (
+            {INITIAL_RATING_OPTIONS.map((rating) => (
               <option key={rating} value={rating}>
                 {t("admin.initialRatingOption", { rating })}
               </option>

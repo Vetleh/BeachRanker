@@ -6,7 +6,7 @@ export type TranslationKey = keyof typeof en;
 
 export const translations = {
   en,
-  no
+  no,
 };
 
 type Dictionary = typeof en;
@@ -18,11 +18,7 @@ type LeafPaths<T, Prefix extends string = ""> = {
 
 export type TranslationPath = LeafPaths<Dictionary>;
 
-export function translate(
-  language: Language,
-  path: TranslationPath,
-  values: Record<string, string | number> = {}
-) {
+export function translate(language: Language, path: TranslationPath, values: Record<string, string | number> = {}) {
   const template = path.split(".").reduce<unknown>((current, key) => {
     if (current && typeof current === "object" && key in current) {
       return (current as Record<string, unknown>)[key];

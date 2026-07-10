@@ -28,7 +28,7 @@ export async function createSessionCookie(env: Env, userId: string) {
 export async function createSessionToken(env: Env, userId: string) {
   const payload: TokenPayload = {
     sub: userId,
-    exp: Math.floor(Date.now() / 1000) + tokenMaxAgeSeconds
+    exp: Math.floor(Date.now() / 1000) + tokenMaxAgeSeconds,
   };
   return signToken(env.JWT_SECRET, payload);
 }
@@ -61,7 +61,7 @@ export async function getAuthUser(request: Request, env: Env): Promise<AuthUser 
     email: user.email,
     displayName: user.displayName,
     role: user.role,
-    active: true
+    active: true,
   };
 }
 

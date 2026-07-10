@@ -24,4 +24,3 @@ export type Env = {
     fetch(request: Request): Promise<Response>;
   };
 };
-

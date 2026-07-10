@@ -1,7 +1,7 @@
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    message: string
+    message: string,
   ) {
     super(message);
   }
@@ -41,4 +41,3 @@ export function requireString(value: string | undefined, name: string) {
 
   return value;
 }
-

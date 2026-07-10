@@ -39,14 +39,14 @@ export function calculateEloUpdate(match: EloMatchInput): EloPlayerResult[] {
       playerId: player.id,
       preRating: player.rating,
       postRating: player.rating + deltaA,
-      delta: deltaA
+      delta: deltaA,
     })),
     ...match.teamB.map((player) => ({
       playerId: player.id,
       preRating: player.rating,
       postRating: player.rating + deltaB,
-      delta: deltaB
-    }))
+      delta: deltaB,
+    })),
   ];
 }
 

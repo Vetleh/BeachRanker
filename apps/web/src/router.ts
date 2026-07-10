@@ -25,21 +25,22 @@ export function useBrowserRoute(): [AppRoute, (path: string, options?: { replace
   }, []);
 
   const navigate = useMemo(
-    () => (path: string, options: { replace?: boolean } = {}) => {
-      const nextPath = normalizePath(path);
-      if (nextPath === window.location.pathname) {
-        setRoute(parseRoute(nextPath));
-        return;
-      }
+    () =>
+      (path: string, options: { replace?: boolean } = {}) => {
+        const nextPath = normalizePath(path);
+        if (nextPath === window.location.pathname) {
+          setRoute(parseRoute(nextPath));
+          return;
+        }
 
-      if (options.replace) {
-        window.history.replaceState(null, "", nextPath);
-      } else {
-        window.history.pushState(null, "", nextPath);
-      }
-      setRoute(parseRoute(nextPath));
-    },
-    []
+        if (options.replace) {
+          window.history.replaceState(null, "", nextPath);
+        } else {
+          window.history.pushState(null, "", nextPath);
+        }
+        setRoute(parseRoute(nextPath));
+      },
+    [],
   );
 
   return [route, navigate];

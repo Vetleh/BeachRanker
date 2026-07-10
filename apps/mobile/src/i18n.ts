@@ -2,7 +2,7 @@ export type Language = "no" | "en";
 
 export const languageOptions: Array<{ value: Language; label: string; shortLabel: string; dateLocale: string }> = [
   { value: "no", label: "🇳🇴 Norsk", shortLabel: "🇳🇴 NO", dateLocale: "nb-NO" },
-  { value: "en", label: "🇬🇧 English", shortLabel: "🇬🇧 EN", dateLocale: "en-GB" }
+  { value: "en", label: "🇬🇧 English", shortLabel: "🇬🇧 EN", dateLocale: "en-GB" },
 ];
 
 const translations = {
@@ -71,7 +71,7 @@ const translations = {
     adminRole: "Admin",
     playerRole: "Spiller",
     linkedPlayer: "Tilknyttet spiller",
-    couldNotCreateUser: "Kunne ikke opprette bruker"
+    couldNotCreateUser: "Kunne ikke opprette bruker",
   },
   en: {
     loadingApp: "Loading BeachRanker...",
@@ -138,8 +138,8 @@ const translations = {
     adminRole: "Admin",
     playerRole: "Player",
     linkedPlayer: "Linked player",
-    couldNotCreateUser: "Could not create user"
-  }
+    couldNotCreateUser: "Could not create user",
+  },
 };
 
 export type TranslationKey = keyof (typeof translations)["en"];

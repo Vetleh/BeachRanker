@@ -7,8 +7,8 @@ describe("score helpers", () => {
       deriveWinner([
         { teamAPoints: 21, teamBPoints: 19 },
         { teamAPoints: 18, teamBPoints: 21 },
-        { teamAPoints: 15, teamBPoints: 12 }
-      ])
+        { teamAPoints: 15, teamBPoints: 12 },
+      ]),
     ).toBe("A");
   });
 
@@ -16,8 +16,8 @@ describe("score helpers", () => {
     expect(
       formatScore([
         { teamAPoints: 21, teamBPoints: 19 },
-        { teamAPoints: 15, teamBPoints: 13 }
-      ])
+        { teamAPoints: 15, teamBPoints: 13 },
+      ]),
     ).toBe("21-19, 15-13");
   });
 });

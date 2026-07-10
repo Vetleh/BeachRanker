@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.wrangler
+apps/mobile/ios
+apps/mobile/assets
+apps/mobile/metro.config.js
+apps/worker/src/worker-configuration.d.ts
+package-lock.json
+*.png
+*.svg
+*.storyboard
+*.plist
+*.pbxproj

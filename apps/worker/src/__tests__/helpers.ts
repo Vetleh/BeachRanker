@@ -9,7 +9,7 @@ class TestPreparedStatement implements D1PreparedStatement {
 
   constructor(
     private readonly database: TestD1Database,
-    private readonly sql: string
+    private readonly sql: string,
   ) {}
 
   bind(...values: unknown[]) {
@@ -48,7 +48,10 @@ class TestD1Database implements D1Database {
   }
 
   async exec(sql: string) {
-    for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean)) {
+    for (const statement of sql
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)) {
       const createMatch = statement.match(/^CREATE TABLE IF NOT EXISTS ([\w_]+)/i);
       if (createMatch) {
         this.tables.set(createMatch[1], []);
@@ -81,7 +84,7 @@ export async function applySchema(db: D1Database) {
 export async function seedAdmin(db: D1Database) {
   await db
     .prepare(
-      "INSERT INTO users (id, email, displayName, passwordHash, role, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO users (id, email, displayName, passwordHash, role, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind("admin-user", "admin@example.com", "Beach Admin", await hashPassword("change-me"), "ADMIN", 1, now(), now())
     .run();
@@ -109,7 +112,7 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     const table = getTable(tables, "match_sets");
     tables.set(
       "match_sets",
-      table.filter((row) => row.matchId !== values[0])
+      table.filter((row) => row.matchId !== values[0]),
     );
     return;
   }
@@ -123,11 +126,11 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
   if (deleteMatch) {
     tables.set(
       "matches",
-      getTable(tables, "matches").filter((row) => row.id !== values[0])
+      getTable(tables, "matches").filter((row) => row.id !== values[0]),
     );
     tables.set(
       "match_sets",
-      getTable(tables, "match_sets").filter((row) => row.matchId !== values[0])
+      getTable(tables, "match_sets").filter((row) => row.matchId !== values[0]),
     );
     return;
   }
@@ -144,7 +147,7 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
         teamAPlayer2Id: values[4],
         teamBPlayer1Id: values[5],
         teamBPlayer2Id: values[6],
-        updatedAt: values[7]
+        updatedAt: values[7],
       });
     }
     return;
@@ -156,7 +159,7 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     if (player) {
       Object.assign(player, {
         userId: values[0],
-        updatedAt: values[1]
+        updatedAt: values[1],
       });
     }
     return;
@@ -207,12 +210,7 @@ function hydrateMatches(tables: Map<string, Row[]>, playerId?: unknown) {
     .filter(
       (match) =>
         !playerId ||
-        [
-          match.teamAPlayer1Id,
-          match.teamAPlayer2Id,
-          match.teamBPlayer1Id,
-          match.teamBPlayer2Id
-        ].includes(playerId)
+        [match.teamAPlayer1Id, match.teamAPlayer2Id, match.teamBPlayer1Id, match.teamBPlayer2Id].includes(playerId),
     )
     .sort((a, b) => String(b.playedAt).localeCompare(String(a.playedAt)))
     .map((match) => ({
@@ -225,7 +223,7 @@ function hydrateMatches(tables: Map<string, Row[]>, playerId?: unknown) {
       teamAPlayer2Gender: players.find((player) => player.id === match.teamAPlayer2Id)?.gender ?? "MEN",
       teamBPlayer1Gender: players.find((player) => player.id === match.teamBPlayer1Id)?.gender ?? "MEN",
       teamBPlayer2Gender: players.find((player) => player.id === match.teamBPlayer2Id)?.gender ?? "MEN",
-      enteredByDisplayName: users.find((user) => user.id === match.enteredByUserId)?.displayName
+      enteredByDisplayName: users.find((user) => user.id === match.enteredByUserId)?.displayName,
     }));
 }
 
