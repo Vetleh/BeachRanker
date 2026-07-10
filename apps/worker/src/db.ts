@@ -141,18 +141,20 @@ export async function countActivePlayers(db: D1Database, playerIds: string[]) {
 export async function createMatch(db: D1Database, input: MatchInput, winningTeam: "A" | "B", enteredByUserId: string) {
   const matchId = createId();
   const isTiebreak = input.isTiebreak ?? input.sets.length >= 3;
+  const isRanked = input.isRanked ?? true;
   const timestamp = nowIso();
 
   await db.batch([
     db
       .prepare(
-        "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO matches (id, playedAt, winningTeam, isTiebreak, isRanked, enteredByUserId, teamAPlayer1Id, teamAPlayer2Id, teamBPlayer1Id, teamBPlayer2Id, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
       .bind(
         matchId,
         input.playedAt,
         winningTeam,
         isTiebreak ? 1 : 0,
+        isRanked ? 1 : 0,
         enteredByUserId,
         input.teamAPlayerIds[0],
         input.teamAPlayerIds[1],
@@ -169,15 +171,17 @@ export async function createMatch(db: D1Database, input: MatchInput, winningTeam
 
 export async function updateMatch(db: D1Database, matchId: string, input: MatchInput, winningTeam: "A" | "B") {
   const isTiebreak = input.isTiebreak ?? input.sets.length >= 3;
+  const isRanked = input.isRanked ?? true;
   await db.batch([
     db
       .prepare(
-        "UPDATE matches SET playedAt = ?, winningTeam = ?, isTiebreak = ?, teamAPlayer1Id = ?, teamAPlayer2Id = ?, teamBPlayer1Id = ?, teamBPlayer2Id = ?, updatedAt = ? WHERE id = ?",
+        "UPDATE matches SET playedAt = ?, winningTeam = ?, isTiebreak = ?, isRanked = ?, teamAPlayer1Id = ?, teamAPlayer2Id = ?, teamBPlayer1Id = ?, teamBPlayer2Id = ?, updatedAt = ? WHERE id = ?",
       )
       .bind(
         input.playedAt,
         winningTeam,
         isTiebreak ? 1 : 0,
+        isRanked ? 1 : 0,
         input.teamAPlayerIds[0],
         input.teamAPlayerIds[1],
         input.teamBPlayerIds[0],
@@ -235,6 +239,7 @@ export async function listMatches(db: D1Database, playerId?: string) {
         m.playedAt,
         m.winningTeam,
         m.isTiebreak,
+        m.isRanked,
         m.enteredByUserId,
         m.teamAPlayer1Id,
         m.teamAPlayer2Id,

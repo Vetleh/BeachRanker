@@ -37,6 +37,7 @@ export type MatchInput = {
   teamBPlayerIds: string[];
   sets: MatchSet[];
   isTiebreak?: boolean;
+  isRanked?: boolean;
 };
 
 export type MatchRow = {
@@ -44,6 +45,7 @@ export type MatchRow = {
   playedAt: string;
   winningTeam: TeamSide;
   isTiebreak: number;
+  isRanked: number;
   enteredByUserId: string;
   teamAPlayer1Id: string;
   teamAPlayer2Id: string;

@@ -45,6 +45,7 @@ export type Match = {
   playedAt: string;
   winningTeam: TeamSide;
   isTiebreak: boolean;
+  isRanked: boolean;
   rated: boolean;
   teamA: MatchPlayer[];
   teamB: MatchPlayer[];
@@ -61,6 +62,7 @@ export type MatchPayload = {
   teamBPlayerIds: string[];
   sets: MatchSet[];
   isTiebreak: boolean;
+  isRanked?: boolean;
 };
 
 export type CreateUserPayload = {

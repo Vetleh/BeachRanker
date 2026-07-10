@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS matches (
   playedAt TEXT NOT NULL,
   winningTeam TEXT NOT NULL CHECK (winningTeam IN ('A', 'B')),
   isTiebreak INTEGER NOT NULL DEFAULT 0,
+  isRanked INTEGER NOT NULL DEFAULT 1,
   enteredByUserId TEXT NOT NULL,
   teamAPlayer1Id TEXT NOT NULL,
   teamAPlayer2Id TEXT NOT NULL,

@@ -96,6 +96,7 @@
     "saving": "Saving...",
     "saved": "Match saved. Ready for another match.",
     "duplicateWarning": "A match with these four players already exists on this date.",
+    "countForRanking": "Count this match toward the rankings",
     "selectFourUnique": "Select four unique players.",
     "scoresNeedWinner": "Set scores must produce a winner.",
     "invalidScores": "Enter valid scores: every completed set needs a winner with at least a two-point margin.",

@@ -84,6 +84,7 @@ export function parseMatch(input: unknown): MatchInput {
     teamBPlayerIds,
     sets,
     isTiebreak: optionalBoolean(body.isTiebreak, "isTiebreak"),
+    isRanked: body.isRanked === undefined ? true : optionalBoolean(body.isRanked, "isRanked"),
   };
 }
 

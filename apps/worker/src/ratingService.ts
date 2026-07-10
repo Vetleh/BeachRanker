@@ -121,6 +121,7 @@ export async function formatMatch(db: D1Database, match: MatchRow) {
     playedAt: match.playedAt,
     winningTeam: match.winningTeam,
     isTiebreak: match.isTiebreak === 1,
+    isRanked: match.isRanked !== 0,
     rated,
     teamA: [
       { id: match.teamAPlayer1Id, name: match.teamAPlayer1Name, deltaFor: ratingSnapshots },
@@ -157,6 +158,9 @@ function formatMatchPlayer(player: { id: string; name: string; deltaFor: RatingS
 }
 
 function isRatedMatch(match: MatchRow) {
+  if (match.isRanked === 0) {
+    return false;
+  }
   const genders: PlayerGender[] = [
     match.teamAPlayer1Gender ?? "MEN",
     match.teamAPlayer2Gender ?? "MEN",

@@ -655,6 +655,7 @@ function MatchForm({
   const [teamAPlayerIds, setTeamAPlayerIds] = useState<string[]>(["", ""]);
   const [teamBPlayerIds, setTeamBPlayerIds] = useState<string[]>(["", ""]);
   const [sets, setSets] = useState<EditableMatchSet[]>(emptySets);
+  const [isRanked, setIsRanked] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
@@ -668,6 +669,7 @@ function MatchForm({
     setTeamAPlayerIds(editingMatch.teamA.map((player) => player.id));
     setTeamBPlayerIds(editingMatch.teamB.map((player) => player.id));
     setSets(editingMatch.sets.map((set) => ({ teamAPoints: set.teamAPoints, teamBPoints: set.teamBPoints })));
+    setIsRanked(editingMatch.isRanked);
   }, [editingMatch]);
 
   const numericSets = useMemo(() => normalizeSets(sets), [sets]);
@@ -739,6 +741,7 @@ function MatchForm({
       teamBPlayerIds,
       sets: numericSets,
       isTiebreak,
+      isRanked,
     };
 
     setSaving(true);
@@ -854,6 +857,10 @@ function MatchForm({
           </div>
         </div>
         {duplicateMatch && <p className="form-warning">{t("matchForm.duplicateWarning")}</p>}
+        <label className="checkbox-field">
+          <input type="checkbox" checked={isRanked} onChange={(event) => setIsRanked(event.target.checked)} />
+          <span>{t("matchForm.countForRanking")}</span>
+        </label>
         {error && <p className="form-error">{error}</p>}
         {success && <p className="form-success">{success}</p>}
         <div className="form-actions">
