@@ -46,6 +46,7 @@
     "enteredBy": "Registrert av {name}",
     "edit": "Rediger",
     "delete": "Slett",
+    "confirmDelete": "Slette denne kampen? Rangeringen beregnes på nytt.",
     "teamA": "Lag A",
     "teamB": "Lag B",
     "playerMatchesTitle": "{name} sine kamper",

@@ -46,6 +46,7 @@
     "enteredBy": "Entered by {name}",
     "edit": "Edit",
     "delete": "Delete",
+    "confirmDelete": "Delete this match? This will recalculate the rankings.",
     "teamA": "Team A",
     "teamB": "Team B",
     "playerMatchesTitle": "{name}'s Matches",

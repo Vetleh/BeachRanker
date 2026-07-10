@@ -540,9 +540,15 @@ function MatchesView({
                   type="button"
                   disabled={busyMatchId === match.id}
                   onClick={async () => {
+                    if (!window.confirm(t("matches.confirmDelete"))) {
+                      return;
+                    }
                     setBusyMatchId(match.id);
-                    await onDelete(match.id);
-                    setBusyMatchId("");
+                    try {
+                      await onDelete(match.id);
+                    } finally {
+                      setBusyMatchId("");
+                    }
                   }}
                 >
                   {t("matches.delete")}

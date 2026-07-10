@@ -21,6 +21,8 @@ import {
   updatePlayer,
   updateUserPassword,
   updateMatch,
+  addAuditLog,
+  listAuditLog,
 } from "./db";
 import type { Env } from "./env";
 import { ApiError, json, noContent, readJson, requireString } from "./http";
@@ -60,6 +62,7 @@ const routes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: "POST", pattern: /^\/api\/matches$/, handler: addMatch },
   { method: "PATCH", pattern: /^\/api\/matches\/(?<id>[^/]+)$/, handler: correctMatch },
   { method: "DELETE", pattern: /^\/api\/matches\/(?<id>[^/]+)$/, handler: removeMatch },
+  { method: "GET", pattern: /^\/api\/admin\/audit-log$/, handler: auditLog },
 ];
 
 async function health({ env }: RouteContext) {
@@ -199,6 +202,7 @@ async function addMatch({ request, env }: RouteContext) {
   const winningTeam = deriveWinnerFromSets(input.sets);
   const matchId = await createMatch(env.DB, input, winningTeam, user.id);
   await recalculateRatings(env.DB);
+  await addAuditLog(env.DB, { actorUserId: user.id, action: "CREATE", entityType: "MATCH", entityId: matchId });
   const match = (await listMatches(env.DB)).find((candidate) => candidate.id === matchId);
   if (!match) {
     throw new ApiError(500, "Could not load saved match");
@@ -207,7 +211,7 @@ async function addMatch({ request, env }: RouteContext) {
 }
 
 async function correctMatch({ request, env, params }: RouteContext) {
-  requireAdmin(await getAuthUser(request, env));
+  const user = requireAdmin(await getAuthUser(request, env));
   const input = parseMatch(await readJson(request));
   validateUniquePlayers(input.teamAPlayerIds, input.teamBPlayerIds);
   await assertPlayersExist(env, [...input.teamAPlayerIds, ...input.teamBPlayerIds]);
@@ -215,6 +219,7 @@ async function correctMatch({ request, env, params }: RouteContext) {
   const matchId = requireString(params.id, "id");
   await updateMatch(env.DB, matchId, input, winningTeam);
   await recalculateRatings(env.DB);
+  await addAuditLog(env.DB, { actorUserId: user.id, action: "UPDATE", entityType: "MATCH", entityId: matchId });
   const match = (await listMatches(env.DB)).find((candidate) => candidate.id === matchId);
   if (!match) {
     throw new ApiError(404, "Match not found");
@@ -223,10 +228,17 @@ async function correctMatch({ request, env, params }: RouteContext) {
 }
 
 async function removeMatch({ request, env, params }: RouteContext) {
-  requireAdmin(await getAuthUser(request, env));
-  await deleteMatch(env.DB, requireString(params.id, "id"));
+  const user = requireAdmin(await getAuthUser(request, env));
+  const matchId = requireString(params.id, "id");
+  await deleteMatch(env.DB, matchId);
   await recalculateRatings(env.DB);
+  await addAuditLog(env.DB, { actorUserId: user.id, action: "DELETE", entityType: "MATCH", entityId: matchId });
   return noContent();
+}
+
+async function auditLog({ request, env }: RouteContext) {
+  requireAdmin(await getAuthUser(request, env));
+  return json({ entries: await listAuditLog(env.DB) });
 }
 
 async function assertPlayersExist(env: Env, playerIds: string[]) {

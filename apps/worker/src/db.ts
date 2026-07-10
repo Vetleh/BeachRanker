@@ -194,6 +194,23 @@ export async function deleteMatch(db: D1Database, matchId: string) {
   await db.prepare("DELETE FROM matches WHERE id = ?").bind(matchId).run();
 }
 
+export async function addAuditLog(db: D1Database, input: { actorUserId: string; action: string; entityType: string; entityId: string }) {
+  try {
+    await db.prepare("INSERT INTO audit_log (id, actorUserId, action, entityType, entityId) VALUES (?, ?, ?, ?, ?)")
+      .bind(createId(), input.actorUserId, input.action, input.entityType, input.entityId).run();
+  } catch (error) {
+    // Keep match writes compatible while an environment is being migrated.
+    if (!(error instanceof Error) || !error.message.includes("audit_log")) {
+      throw error;
+    }
+  }
+}
+
+export async function listAuditLog(db: D1Database) {
+  const { results } = await db.prepare("SELECT a.id, a.actorUserId, a.action, a.entityType, a.entityId, a.createdAt, u.displayName as actorDisplayName FROM audit_log a JOIN users u ON u.id = a.actorUserId ORDER BY a.createdAt DESC LIMIT 200").all();
+  return results;
+}
+
 export async function listMatches(db: D1Database, playerId?: string) {
   const playerFilter = playerId
     ? `WHERE ? IN (
