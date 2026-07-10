@@ -126,6 +126,35 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
+  const deleteExpiredLoginAttempts = sql.match(/^DELETE FROM login_attempts WHERE resetAt <= \? AND lockedUntil <= \?/i);
+  if (deleteExpiredLoginAttempts) {
+    tables.set(
+      "login_attempts",
+      getTable(tables, "login_attempts").filter(
+        (row) => Number(row.resetAt) > Number(values[0]) || Number(row.lockedUntil) > Number(values[1]),
+      ),
+    );
+    return;
+  }
+
+  const deleteLoginAttempt = sql.match(/^DELETE FROM login_attempts WHERE key = \?/i);
+  if (deleteLoginAttempt) {
+    tables.set(
+      "login_attempts",
+      getTable(tables, "login_attempts").filter((row) => row.key !== values[0]),
+    );
+    return;
+  }
+
+  const updateLoginAttempt = sql.match(/^UPDATE login_attempts SET /i);
+  if (updateLoginAttempt) {
+    const attempt = getTable(tables, "login_attempts").find((row) => row.key === values[3]);
+    if (attempt) {
+      Object.assign(attempt, { count: values[0], resetAt: values[1], lockedUntil: values[2] });
+    }
+    return;
+  }
+
   const deleteRatingLock = sql.match(/^DELETE FROM rating_recalc_lock WHERE id = \? AND expiresAt <= \?/i);
   if (deleteRatingLock) {
     tables.set(
@@ -210,6 +239,9 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   }
   if (/FROM rating_recalc_lock WHERE id = \?/i.test(sql)) {
     return getTable(tables, "rating_recalc_lock").filter((row) => row.id === values[0]);
+  }
+  if (/FROM login_attempts WHERE key = \?/i.test(sql)) {
+    return getTable(tables, "login_attempts").filter((row) => row.key === values[0]);
   }
   if (/COUNT\(\*\) as count FROM players/i.test(sql)) {
     const ids = values;

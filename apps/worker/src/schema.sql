@@ -72,3 +72,10 @@ CREATE TABLE IF NOT EXISTS rating_recalc_lock (
   acquiredAt INTEGER NOT NULL,
   expiresAt INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  resetAt INTEGER NOT NULL,
+  lockedUntil INTEGER NOT NULL
+);

@@ -86,15 +86,15 @@ export async function handleApi(request: Request, env: Env) {
 async function login({ request, env }: RouteContext) {
   const input = parseLogin(await readJson(request));
   const attemptKey = loginAttemptKey(request, input.email);
-  assertLoginAllowed(attemptKey);
+  await assertLoginAllowed(env.DB, attemptKey);
   const user = await findUserByEmail(env.DB, input.email);
 
   if (!user || user.active !== 1 || !(await verifyPassword(input.password, user.passwordHash))) {
-    recordFailedLogin(attemptKey);
+    await recordFailedLogin(env.DB, attemptKey);
     throw new ApiError(401, "Invalid email or password");
   }
 
-  clearLoginAttempts(attemptKey);
+  await clearLoginAttempts(env.DB, attemptKey);
   const responseUser = {
     id: user.id,
     email: user.email,
