@@ -1,6 +1,7 @@
 import { createId, nowIso } from "./crypto";
 import type { D1Database, D1PreparedStatement } from "./env";
 import { STARTING_RATING } from "./elo";
+import { ApiError } from "./http";
 import type { MatchInput, MatchRow, MatchSet, Player, PlayerGender, RatingSnapshot, User } from "./types";
 
 export async function findUserByEmail(db: D1Database, email: string) {
@@ -58,6 +59,22 @@ export async function createUser(
   db: D1Database,
   input: { email: string; displayName: string; passwordHash: string; role: string; playerId?: string },
 ) {
+  if (input.playerId) {
+    const player = await db
+      .prepare("SELECT id, active, userId FROM players WHERE id = ?")
+      .bind(input.playerId)
+      .first<{ id: string; active: number; userId?: string | null }>();
+    if (!player) {
+      throw new ApiError(400, "Linked player not found");
+    }
+    if (player.active !== 1) {
+      throw new ApiError(400, "Linked player must be active");
+    }
+    if (player.userId) {
+      throw new ApiError(409, "Player is already linked to a user");
+    }
+  }
+
   const user = {
     id: createId(),
     email: input.email,
@@ -68,24 +85,29 @@ export async function createUser(
     createdAt: nowIso(),
     updatedAt: nowIso(),
   };
-  await db
-    .prepare(
-      "INSERT INTO users (id, email, displayName, passwordHash, role, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-    .bind(
-      user.id,
-      user.email,
-      user.displayName,
-      user.passwordHash,
-      user.role,
-      user.active,
-      user.createdAt,
-      user.updatedAt,
-    )
-    .run();
-  if (input.playerId) {
-    await linkPlayerToUser(db, input.playerId, user.id);
-  }
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO users (id, email, displayName, passwordHash, role, active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .bind(
+        user.id,
+        user.email,
+        user.displayName,
+        user.passwordHash,
+        user.role,
+        user.active,
+        user.createdAt,
+        user.updatedAt,
+      ),
+    ...(input.playerId
+      ? [
+          db
+            .prepare("UPDATE players SET userId = ?, updatedAt = ? WHERE id = ? AND userId IS NULL")
+            .bind(user.id, nowIso(), input.playerId),
+        ]
+      : []),
+  ]);
   return {
     id: user.id,
     email: user.email,
@@ -123,10 +145,6 @@ export async function updateUserPassword(db: D1Database, userId: string, passwor
     .prepare("SELECT id, email, displayName, passwordHash, role, active FROM users WHERE id = ?")
     .bind(userId)
     .first<User>();
-}
-
-async function linkPlayerToUser(db: D1Database, playerId: string, userId: string) {
-  await db.prepare("UPDATE players SET userId = ?, updatedAt = ? WHERE id = ?").bind(userId, nowIso(), playerId).run();
 }
 
 export async function countActivePlayers(db: D1Database, playerIds: string[]) {

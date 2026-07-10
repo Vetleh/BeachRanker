@@ -173,10 +173,10 @@ function executeWrite(tables: Map<string, Row[]>, sql: string, values: unknown[]
     return;
   }
 
-  const updatePlayerUser = sql.match(/^UPDATE players SET userId = \?, updatedAt = \? WHERE id = \?/i);
+  const updatePlayerUser = sql.match(/^UPDATE players SET userId = \?, updatedAt = \? WHERE id = \?(?: AND userId IS NULL)?/i);
   if (updatePlayerUser) {
     const player = getTable(tables, "players").find((row) => row.id === values[2]);
-    if (player) {
+    if (player && (values.length < 4 || player.userId == null)) {
       Object.assign(player, {
         userId: values[0],
         updatedAt: values[1],
@@ -200,6 +200,9 @@ function executeSelect(tables: Map<string, Row[]>, sql: string, values: unknown[
   }
   if (/FROM players WHERE userId = \?/i.test(sql)) {
     return getTable(tables, "players").filter((row) => row.userId === values[0]);
+  }
+  if (/FROM players WHERE id = \?/i.test(sql)) {
+    return getTable(tables, "players").filter((row) => row.id === values[0]);
   }
   if (/FROM rating_recalc_lock WHERE id = \?/i.test(sql)) {
     return getTable(tables, "rating_recalc_lock").filter((row) => row.id === values[0]);
