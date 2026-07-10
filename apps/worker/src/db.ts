@@ -7,7 +7,7 @@ import type { MatchInput, MatchRow, MatchSet, Player, PlayerGender, RatingSnapsh
 export async function findUserByEmail(db: D1Database, email: string) {
   return db
     .prepare("SELECT id, email, displayName, passwordHash, role, active FROM users WHERE email = ?")
-    .bind(email)
+    .bind(email.trim().toLowerCase())
     .first<User>();
 }
 

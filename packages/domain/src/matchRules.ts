@@ -9,6 +9,9 @@ export function validateMatchSets(sets: MatchSetScore[]): string | null {
   if (sets.length === 0) {
     return "A match must contain at least one set.";
   }
+  if (sets.length > 3) {
+    return "A match cannot contain more than three sets.";
+  }
 
   for (const [index, set] of sets.entries()) {
     const high = Math.max(set.teamAPoints, set.teamBPoints);
@@ -16,6 +19,9 @@ export function validateMatchSets(sets: MatchSetScore[]): string | null {
 
     if (!Number.isInteger(set.teamAPoints) || !Number.isInteger(set.teamBPoints) || low < 0) {
       return `Set ${index + 1} must contain whole, non-negative scores.`;
+    }
+    if (high > 100) {
+      return `Set ${index + 1} scores are too high.`;
     }
     if (set.teamAPoints === set.teamBPoints || high - low < 2) {
       return `Set ${index + 1} must have a winner by at least two points.`;

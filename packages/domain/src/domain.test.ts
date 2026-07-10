@@ -45,8 +45,9 @@ describe("domain rules", () => {
     expect(hasUniquePlayers(["a", "b"], ["a", "d"])).toBe(false);
   });
 
-  it("accepts flexible match lengths while requiring decisive set scores", () => {
+  it("requires decisive scores within a best-of-three match", () => {
     expect(validateMatchSets([{ teamAPoints: 21, teamBPoints: 19 }])).toBeNull();
+    expect(validateMatchSets([{ teamAPoints: 101, teamBPoints: 99 }])).toContain("too high");
     expect(
       validateMatchSets([
         { teamAPoints: 21, teamBPoints: 19 },
@@ -54,7 +55,7 @@ describe("domain rules", () => {
         { teamAPoints: 15, teamBPoints: 13 },
         { teamAPoints: 21, teamBPoints: 17 },
       ]),
-    ).toBeNull();
+    ).toContain("more than three");
     expect(validateMatchSets([{ teamAPoints: 21, teamBPoints: 20 }])).not.toBeNull();
   });
 });

@@ -9,7 +9,7 @@ import type { MatchInput, MatchSet, TeamSide } from "./types";
 
 export function parseLogin(input: unknown) {
   const body = object(input);
-  const email = string(body.email, "email");
+  const email = string(body.email, "email").trim().toLowerCase();
   const password = string(body.password, "password");
   const authMode = body.authMode === undefined ? "cookie" : body.authMode;
   if (!email.includes("@")) {
@@ -41,18 +41,25 @@ export function parsePlayer(input: unknown) {
 
 export function parsePlayerPatch(input: unknown) {
   const body = object(input);
+  const name = body.name === undefined ? undefined : string(body.name, "name").trim();
+  if (name === "") {
+    throw new ApiError(400, "Player name is required");
+  }
   return {
-    name: body.name === undefined ? undefined : string(body.name, "name").trim(),
+    name,
     active: optionalBoolean(body.active, "active"),
   };
 }
 
 export function parseUserCreate(input: unknown) {
   const body = object(input);
-  const email = string(body.email, "email");
+  const email = string(body.email, "email").trim().toLowerCase();
   const displayName = string(body.displayName, "displayName").trim();
   const password = string(body.password, "password");
-  const role = body.role === "ADMIN" ? "ADMIN" : "PLAYER";
+  if (body.role !== "ADMIN" && body.role !== "PLAYER") {
+    throw new ApiError(400, "Invalid role");
+  }
+  const role = body.role;
   const playerId = body.playerId === undefined ? undefined : string(body.playerId, "playerId");
   if (!email.includes("@") || !displayName || password.length < 8) {
     throw new ApiError(400, "Invalid user input");
@@ -153,7 +160,7 @@ function string(input: unknown, name: string) {
 
 function isoDateString(input: unknown, name: string) {
   const value = string(input, name);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
     throw new ApiError(400, `${name} must be an ISO timestamp`);
   }
 
